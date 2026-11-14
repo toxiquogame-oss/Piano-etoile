@@ -8,7 +8,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
-<title>Piano étoilé · V20</title>
+<title>Piano étoilé · V21</title>
 <style>
 :root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,'Segoe UI',sans-serif;--bg:#0d0c13;--edge:#38313f;--accent:#fe455b;--muted:#b5adba}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -10%,#35243b 0,#111019 45%,#0b0b10 95%);color:#f6f1f7;min-height:100vh}
@@ -154,9 +154,9 @@ body.immersive-open{overflow:hidden}
 <script defer src="./piano-calibration.js"></script>
 </head>
 <body>
-<header><div class="brand"><div class="logo" aria-hidden="true">✦</div><div><h1>Piano étoilé</h1><div class="sub" id="pianoSubtitle">RockJam RJ361 · 61 touches · Do2 → Do7</div></div></div><span class="smallpill">Version 20 · App installable</span></header>
+<header><div class="brand"><div class="logo" aria-hidden="true">✦</div><div><h1>Piano étoilé</h1><div class="sub" id="pianoSubtitle">RockJam RJ361 · 61 touches · Do2 → Do7</div></div></div><span class="smallpill">Version 21 · App installable</span></header>
 <section class="app-updater" id="appUpdater" aria-label="Mises à jour de l’application">
- <span id="appUpdateStatus">Version 20 · Les mises à jour automatiques nécessitent une installation depuis une adresse HTTPS.</span>
+ <span id="appUpdateStatus">Version 21 · Les mises à jour automatiques nécessitent une installation depuis une adresse HTTPS.</span>
  <button type="button" id="checkUpdates">Vérifier les mises à jour</button>
  <button type="button" id="installUpdates" hidden>Installer la mise à jour</button>
 </section>
@@ -200,7 +200,7 @@ body.immersive-open{overflow:hidden}
 <div class="scroll" id="scroller"><div class="playfield" id="playfield"><canvas id="roll" width="1008" height="285" aria-label="Partition de notes descendantes"></canvas><div class="ledrail" id="ledrail"></div><div class="keyboard" id="keyboard"></div></div></div><div class="stage-hint" id="stageHint">Astuce : en plein écran, toutes les touches sont affichées automatiquement. Le bouton « + MIDI » permet d'importer un morceau sans quitter le plein écran.</div>
 </div>
 <div class="progress"><span id="counter">0 / 0 notes</span><div class="track"><div class="fill" id="fill"></div></div><span id="clock">00:00</span></div>
-<div class="info"><div class="infobox"><strong>Pour tester sur ton téléphone</strong><p>1. Pour tester ton vrai RockJam, active <b>🎙 Détection sonore</b> et autorise le microphone. 2. Choisis <b>Apprentissage</b> puis <b>Jouer</b>. 3. Joue les notes ou accords indiqués : l’application essaiera de les reconnaître et d’avancer. <b>Pour revenir au fonctionnement tactile, désactive la détection.</b> Le son de piano du site est facultatif : baisse son volume pour éviter les fausses détections.</p></div><div class="infobox"><strong>État du projet</strong><p>Six arrangements MIDI sont inclus publiquement et une démonstration est disponible ; les autres fichiers importés restent locaux sur cet appareil. Deux profils de clavier sont disponibles. Violet sous C4 (main gauche), rose à partir de C4 (main droite). Les six morceaux de la V13 sont de nouveau intégrés. Les notes impossibles dépendent du clavier choisi : RockJam Do2–Do7 ; Schubert Etude 61 MKII : 61 touches, dont les cinq plus aiguës hors service. Elles sont grisées et ignorées pendant la lecture des MIDI ; la première note peut être réglée dans le panneau de calibration. Le lecteur conserve le tempo et ses changements (vitesse 100 %). Le son utilise des enregistrements d'un vrai piano à queue Yamaha C5. La V20 reconnaît séparément les notes jouables et tente de distinguer les accords à l'octave sans apprendre toutes les combinaisons et une sélection de source audio pour les interfaces USB-C compatibles. Les accords restent expérimentaux. La précision varie selon le bruit, le son du piano, les accords et la distance. Le ruban LED réel et l’ESP32 ne sont pas encore connectés. Si l’autorisation micro échoue en fichier HTML local, Chrome peut exiger une page HTTPS.</p></div></div>
+<div class="info"><div class="infobox"><strong>Pour tester sur ton téléphone</strong><p>1. Pour tester ton vrai RockJam, active <b>🎙 Détection sonore</b> et autorise le microphone. 2. Choisis <b>Apprentissage</b> puis <b>Jouer</b>. 3. Joue les notes ou accords indiqués : l’application essaiera de les reconnaître et d’avancer. <b>Pour revenir au fonctionnement tactile, désactive la détection.</b> Le son de piano du site est facultatif : baisse son volume pour éviter les fausses détections.</p></div><div class="infobox"><strong>État du projet</strong><p>Six arrangements MIDI sont inclus publiquement et une démonstration est disponible ; les autres fichiers importés restent locaux sur cet appareil. Deux profils de clavier sont disponibles. Violet sous C4 (main gauche), rose à partir de C4 (main droite). Les six morceaux de la V13 sont de nouveau intégrés. Les notes impossibles dépendent du clavier choisi : RockJam Do2–Do7 ; Schubert Etude 61 MKII : 61 touches, dont les cinq plus aiguës hors service. Elles sont grisées et ignorées pendant la lecture des MIDI ; la première note peut être réglée dans le panneau de calibration. Le lecteur conserve le tempo et ses changements (vitesse 100 %). Le son utilise des enregistrements d'un vrai piano à queue Yamaha C5. La V21 reconnaît séparément les notes jouables et tente de distinguer les accords à l'octave sans apprendre toutes les combinaisons et une sélection de source audio pour les interfaces USB-C compatibles. Les accords restent expérimentaux. La précision varie selon le bruit, le son du piano, les accords et la distance. Le ruban LED réel et l’ESP32 ne sont pas encore connectés. Si l’autorisation micro échoue en fichier HTML local, Chrome peut exiger une page HTTPS.</p></div></div>
 </main>
 <footer>Piano : Salamander Grand Piano V3 par Alexander Holm, licence <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a> · Échantillons servis par <a href="https://tonejs.github.io/audio/salamander/">Tone.js</a>. Une connexion est nécessaire pour charger les enregistrements.<p>Les six arrangements intégrés sont publiquement accessibles dans le code de cette application. Les autres fichiers MIDI que tu importes restent locaux sur cet appareil.</p></footer>
 <script>
@@ -441,24 +441,12 @@ const mic={
    if(neighbors&&fundamental<2.7*background/neighbors)continue;
    possible.push({n,strength:coeff[i]/biggest,freq});
   }
-  // Un Do3 possède des harmoniques près de Do4 et Do5, mais les trois
-  // Do peuvent aussi être réellement joués ensemble. Éviter la suppression
-  // automatique des octaves lorsque la note aiguë possède un signal indépendant.
-  possible.sort((x,y)=>x.n-y.n);
-  const accepted=[];
-  for(const candidate of possible){
-   const shadow=accepted.some(root=>{
-    const ratio=candidate.freq/root.freq,h=Math.round(ratio);
-    if(!(h>=2&&h<=12&&Math.abs(ratio-h)/h<.027))return false;
-    // Les vrais profils appris individuellement permettent d'assouplir
-    // le seuil, tout en conservant un filtrage des harmoniques fantômes.
-    const calibratedPair=window.pianoEtoileIsPairTrained?.(root.n,candidate.n)===true;
-    const ratioRequired=calibratedPair?.38:.63;
-    return candidate.strength<=root.strength*ratioRequired;
-   });
-   if(!shadow)accepted.push(candidate);
-  }
-  return accepted.sort((x,y)=>y.strength-x.strength).slice(0,5)
+  // V21 : ne plus supprimer une note parce qu'elle est plus faible
+  // qu'une autre à l'octave. Cette suppression masquait des touches
+  // réellement jouées. L'ajustement spectral parcimonieux, la validation
+  // de la fondamentale et la stabilité sur plusieurs trames restent actifs
+  // pour limiter les harmoniques fantômes.
+  return possible.sort((x,y)=>y.strength-x.strength).slice(0,5)
    .map(({n,strength})=>({n,strength}));
  },
  async start(){
