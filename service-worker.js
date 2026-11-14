@@ -1,5 +1,5 @@
 // Piano étoilé · build 18 · update by replacing files in the same HTTPS deployment.
-const CACHE='piano-etoile-v18-20261114a';
+const CACHE='piano-etoile-v18-20261114b';
 const FILES=['./','./index.html','./piano-calibration.js','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES)));
