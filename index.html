@@ -416,8 +416,11 @@ const mic={
   const biggest=Math.max(...coeff);
   if(biggest<=0)return [];
   let peak=0;for(let k=8;k<Math.min(y.length,1900);k++)peak=Math.max(peak,y[k]);
-  const threshold=Math.max(biggest*(.42-.16*s),max*.045);
-  const baseThreshold=peak*(.25-.12*s);
+  // Pour les accords, les profils sonores appris individuellement autorisent
+  // des notes moins fortes sans ouvrir autant la détection aux fausses harmoniques.
+  const learned=(window.pianoEtoileCalibratedCount?.()||0)>=3;
+  const threshold=Math.max(biggest*(learned?.36-.14*s:.42-.16*s),max*.045);
+  const baseThreshold=peak*(learned?.19-.08*s:.25-.12*s);
   const binHz=this.ctx.sampleRate/this.fftSize;
   const possible=[];
   for(let i=0;i<count;i++){
@@ -446,8 +449,12 @@ const mic={
   for(const candidate of possible){
    const alias=accepted.some(root=>{
     const ratio=candidate.freq/root.freq,h=Math.round(ratio);
-    return h>=2&&h<=12&&Math.abs(ratio-h)/h<.027
-      &&candidate.strength<=root.strength*1.7;
+    if(!(h>=2&&h<=12&&Math.abs(ratio-h)/h<.027))return false;
+    // Si les deux notes ont été enregistrées séparément, leur signature peut
+    // distinguer un véritable accord à l'octave d'une harmonique parasite.
+    const calibratedPair=window.pianoEtoileIsPairTrained?.(root.n,candidate.n)===true;
+    if(calibratedPair&&candidate.strength>root.strength*.52)return false;
+    return candidate.strength<=root.strength*1.7;
    });
    if(!alias)accepted.push(candidate);
   }
