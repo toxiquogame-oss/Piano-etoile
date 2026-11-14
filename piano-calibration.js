@@ -6,6 +6,10 @@ const key='piano-etoile-profiles-v18';
 let trained={};try{trained=JSON.parse(localStorage.getItem(key)||'{}')||{}}catch(e){}
 const $=id=>document.getElementById(id), hz=n=>440*Math.pow(2,(n-69)/12);
 const get=()=>trained[pianoProfile]||(trained[pianoProfile]={});
+// Les gabarits appris séparément aident à distinguer des octaves réellement jouées
+// des harmoniques d'une seule touche. Jamais besoin d'enregistrer les combinaisons.
+window.pianoEtoileIsPairTrained=(a,b)=>Boolean(trained[pianoProfile]?.[a]&&trained[pianoProfile]?.[b]);
+window.pianoEtoileCalibratedCount=()=>Object.keys(trained[pianoProfile]||{}).length;
 const persist=()=>{try{localStorage.setItem(key,JSON.stringify(trained))}catch(e){message('Stockage local indisponible.')}};
 const wrap=document.createElement('section');wrap.className='calibration-panel';
 wrap.innerHTML='<style>.calibration-panel{border:1px solid #52516b;background:#1b1927;border-radius:14px;padding:13px;margin:0 0 12px;font-size:12px;color:#dcd4e6}.calibration-panel h2{font-size:15px;margin:0 0 6px}.calibration-panel p{line-height:1.5;margin:7px 0}.calrow[hidden]{display:none!important}.calrow{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:9px 0}.calibration-panel button,.calibration-panel select{padding:7px;min-height:36px;font-size:12px;max-width:100%}#calStatus{color:#d8c4ff}#calCount{color:#94e7e1;font-weight:bold}</style>'+
