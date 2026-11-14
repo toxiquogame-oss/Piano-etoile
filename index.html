@@ -8,7 +8,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
-<title>Piano étoilé · V21</title>
+<title>Piano étoilé · V22</title>
 <style>
 :root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,'Segoe UI',sans-serif;--bg:#0d0c13;--edge:#38313f;--accent:#fe455b;--muted:#b5adba}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -10%,#35243b 0,#111019 45%,#0b0b10 95%);color:#f6f1f7;min-height:100vh}
@@ -154,9 +154,9 @@ body.immersive-open{overflow:hidden}
 <script defer src="./piano-calibration.js"></script>
 </head>
 <body>
-<header><div class="brand"><div class="logo" aria-hidden="true">✦</div><div><h1>Piano étoilé</h1><div class="sub" id="pianoSubtitle">RockJam RJ361 · 61 touches · Do2 → Do7</div></div></div><span class="smallpill">Version 21 · App installable</span></header>
+<header><div class="brand"><div class="logo" aria-hidden="true">✦</div><div><h1>Piano étoilé</h1><div class="sub" id="pianoSubtitle">RockJam RJ361 · 61 touches · Do2 → Do7</div></div></div><span class="smallpill">Version 22 · App installable</span></header>
 <section class="app-updater" id="appUpdater" aria-label="Mises à jour de l’application">
- <span id="appUpdateStatus">Version 21 · Les mises à jour automatiques nécessitent une installation depuis une adresse HTTPS.</span>
+ <span id="appUpdateStatus">Version 22 · Les mises à jour automatiques nécessitent une installation depuis une adresse HTTPS.</span>
  <button type="button" id="checkUpdates">Vérifier les mises à jour</button>
  <button type="button" id="installUpdates" hidden>Installer la mise à jour</button>
 </section>
@@ -200,7 +200,7 @@ body.immersive-open{overflow:hidden}
 <div class="scroll" id="scroller"><div class="playfield" id="playfield"><canvas id="roll" width="1008" height="285" aria-label="Partition de notes descendantes"></canvas><div class="ledrail" id="ledrail"></div><div class="keyboard" id="keyboard"></div></div></div><div class="stage-hint" id="stageHint">Astuce : en plein écran, toutes les touches sont affichées automatiquement. Le bouton « + MIDI » permet d'importer un morceau sans quitter le plein écran.</div>
 </div>
 <div class="progress"><span id="counter">0 / 0 notes</span><div class="track"><div class="fill" id="fill"></div></div><span id="clock">00:00</span></div>
-<div class="info"><div class="infobox"><strong>Pour tester sur ton téléphone</strong><p>1. Pour tester ton vrai RockJam, active <b>🎙 Détection sonore</b> et autorise le microphone. 2. Choisis <b>Apprentissage</b> puis <b>Jouer</b>. 3. Joue les notes ou accords indiqués : l’application essaiera de les reconnaître et d’avancer. <b>Pour revenir au fonctionnement tactile, désactive la détection.</b> Le son de piano du site est facultatif : baisse son volume pour éviter les fausses détections.</p></div><div class="infobox"><strong>État du projet</strong><p>Six arrangements MIDI sont inclus publiquement et une démonstration est disponible ; les autres fichiers importés restent locaux sur cet appareil. Deux profils de clavier sont disponibles. Violet sous C4 (main gauche), rose à partir de C4 (main droite). Les six morceaux de la V13 sont de nouveau intégrés. Les notes impossibles dépendent du clavier choisi : RockJam Do2–Do7 ; Schubert Etude 61 MKII : 61 touches, dont les cinq plus aiguës hors service. Elles sont grisées et ignorées pendant la lecture des MIDI ; la première note peut être réglée dans le panneau de calibration. Le lecteur conserve le tempo et ses changements (vitesse 100 %). Le son utilise des enregistrements d'un vrai piano à queue Yamaha C5. La V21 reconnaît séparément les notes jouables et tente de distinguer les accords à l'octave sans apprendre toutes les combinaisons et une sélection de source audio pour les interfaces USB-C compatibles. Les accords restent expérimentaux. La précision varie selon le bruit, le son du piano, les accords et la distance. Le ruban LED réel et l’ESP32 ne sont pas encore connectés. Si l’autorisation micro échoue en fichier HTML local, Chrome peut exiger une page HTTPS.</p></div></div>
+<div class="info"><div class="infobox"><strong>Pour tester sur ton téléphone</strong><p>1. Pour tester ton vrai RockJam, active <b>🎙 Détection sonore</b> et autorise le microphone. 2. Choisis <b>Apprentissage</b> puis <b>Jouer</b>. 3. Joue les notes ou accords indiqués : l’application essaiera de les reconnaître et d’avancer. <b>Pour revenir au fonctionnement tactile, désactive la détection.</b> Le son de piano du site est facultatif : baisse son volume pour éviter les fausses détections.</p></div><div class="infobox"><strong>État du projet</strong><p>Six arrangements MIDI sont inclus publiquement et une démonstration est disponible ; les autres fichiers importés restent locaux sur cet appareil. Deux profils de clavier sont disponibles. Violet sous C4 (main gauche), rose à partir de C4 (main droite). Les six morceaux de la V13 sont de nouveau intégrés. Les notes impossibles dépendent du clavier choisi : RockJam Do2–Do7 ; Schubert Etude 61 MKII : 61 touches, dont les cinq plus aiguës hors service. Elles sont grisées et ignorées pendant la lecture des MIDI ; la première note peut être réglée dans le panneau de calibration. Le lecteur conserve le tempo et ses changements (vitesse 100 %). Le son utilise des enregistrements d'un vrai piano à queue Yamaha C5. La V22 améliore la détection micro des sons faibles et reconnaît séparément les notes jouables et tente de distinguer les accords à l'octave sans apprendre toutes les combinaisons et une sélection de source audio pour les interfaces USB-C compatibles. Les accords restent expérimentaux. La précision varie selon le bruit, le son du piano, les accords et la distance. Le ruban LED réel et l’ESP32 ne sont pas encore connectés. Si l’autorisation micro échoue en fichier HTML local, Chrome peut exiger une page HTTPS.</p></div></div>
 </main>
 <footer>Piano : Salamander Grand Piano V3 par Alexander Holm, licence <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a> · Échantillons servis par <a href="https://tonejs.github.io/audio/salamander/">Tone.js</a>. Une connexion est nécessaire pour charger les enregistrements.<p>Les six arrangements intégrés sont publiquement accessibles dans le code de cette application. Les autres fichiers MIDI que tu importes restent locaux sur cet appareil.</p></footer>
 <script>
@@ -356,7 +356,7 @@ const mic={
  enabled:false,starting:false,stream:null,ctx:null,source:null,analyser:null,
  spectrum:null,samples:null,linear:null,frameId:0,lastScan:0,tracks:new Map(),
  detected:new Set(),lastSeen:new Map(),fired:new Map(),generation:0,templates:[],gram:[],
- framePeriod:85,fftSize:16384,confidence:[],
+ framePeriod:85,fftSize:16384,confidence:[],lastInfoAt:0,
  setMessage(msg){$('micStatus').textContent=msg},
  updateButtons(){
   $('micToggle').setAttribute('aria-pressed',String(this.enabled));
@@ -404,9 +404,9 @@ const mic={
   if(max<1e-6)return [];
   const sensitivity=Number($('micSensitivity').value),s=(sensitivity-10)/80;
   // Penalisation plus forte des faibles composantes pour eviter les touches fantomes.
-  const lambda=max*(.25-.11*s);
+  const lambda=max*(.20-.075*s);
   const order=Array.from({length:count},(_,i)=>i).sort((x,y)=>b[y]-b[x]);
-  for(let iter=0;iter<8;iter++){
+  for(let iter=0;iter<10;iter++){
    for(const i of order){
     let residual=b[i]-lambda;
     for(let j=0;j<count;j++)if(j!==i&&coeff[j]>0)residual-=G[i][j]*coeff[j];
@@ -419,8 +419,8 @@ const mic={
   // Pour les accords, les profils sonores appris individuellement autorisent
   // des notes moins fortes sans ouvrir autant la détection aux fausses harmoniques.
   const learned=(window.pianoEtoileCalibratedCount?.()||0)>=3;
-  const threshold=Math.max(biggest*(learned?.36-.14*s:.42-.16*s),max*.045);
-  const baseThreshold=peak*(learned?.19-.08*s:.25-.12*s);
+  const threshold=Math.max(biggest*(learned?.25-.10*s:.32-.12*s),max*.024);
+  const baseThreshold=peak*(learned?.11-.045*s:.145-.055*s);
   const binHz=this.ctx.sampleRate/this.fftSize;
   const possible=[];
   for(let i=0;i<count;i++){
@@ -438,7 +438,7 @@ const mic={
     const k=Math.round(bin)+d;
     if(k>0&&k<y.length){background+=y[k];neighbors++;}
    }
-   if(neighbors&&fundamental<2.7*background/neighbors)continue;
+   if(neighbors&&fundamental<2.2*background/neighbors)continue;
    possible.push({n,strength:coeff[i]/biggest,freq});
   }
   // V21 : ne plus supprimer une note parce qu'elle est plus faible
@@ -502,7 +502,9 @@ const mic={
   let sum=0;for(let i=0;i<this.samples.length;i+=4){const x=this.samples[i];sum+=x*x;}
   const rms=Math.sqrt(sum/(this.samples.length/4));
   const sensitivity=Number($('micSensitivity').value);
-  const gate=.008*Math.pow(0.37,(sensitivity-10)/80);
+  // Une oreillette de casque près du téléphone produit souvent un signal faible.
+  // Le seuil ancien (~0.006 en réglage standard) empêchait alors toute analyse.
+  const gate=.0026*Math.pow(0.43,(sensitivity-10)/80);
   $('micLevel').style.width=(Math.min(100,rms*750))+'%';
   let candidates=[];
   if(rms>gate){
@@ -515,9 +517,10 @@ const mic={
   // Trois analyses positives avant d'accepter une note ; les accords sont traités ensemble.
   for(let n=FIRST;n<=LAST;n++){
    const score=raw.get(n)||0,prev=this.tracks.get(n)||{hits:0,miss:4,lastScore:0};
-   if(score>0){prev.hits=Math.min(6,prev.hits+1);prev.miss=0;prev.lastScore=score;}
-   else{prev.miss++;prev.hits=Math.max(0,prev.hits-1);}
-   if(prev.hits>=3&&prev.miss<2)newly.add(n);
+   // On tolère les petites hésitations de l'analyse lors d'un accord.
+   if(score>0){prev.hits=Math.min(6,prev.hits+1.4);prev.miss=0;prev.lastScore=score;}
+   else{prev.miss++;prev.hits=Math.max(0,prev.hits-.65);}
+   if(prev.hits>=2.6&&prev.miss<3)newly.add(n);
    this.tracks.set(n,prev);
   }
   for(let n=FIRST;n<=LAST;n++){
@@ -526,6 +529,20 @@ const mic={
   }
   this.detected=newly;
   $('micDetected').textContent='Notes entendues : '+(newly.size?[...newly].map(noteName).join(' + '):'—');
+  if(t-this.lastInfoAt>950){
+   this.lastInfoAt=t;
+   if(this.ctx?.state!=='running'){
+    this.setMessage('Micro suspendu par Android. Coupe puis réactive le micro.');
+   }else if(rms<=gate){
+    this.setMessage('Micro actif · son trop faible : rapproche le micro ou monte le volume du piano.');
+   }else if(newly.size){
+    this.setMessage('Micro actif · '+newly.size+' note(s) reconnue(s).');
+   }else if(candidates.length){
+    this.setMessage('Son capté · vérification des notes en cours…');
+   }else{
+    this.setMessage('Son capté, note non reconnue : essaie une touche seule ou monte la sensibilité.');
+   }
+  }
   if(mode==='learn'&&playing&&waiting){
    const group=expectedGroup();
    if(group){
@@ -785,7 +802,7 @@ requestAnimationFrame(layoutKeyboard);
   tell('Recherche de mise à jour…');
   try{
    await reg.update();
-   if(!pending&&!reg.waiting)tell('Piano étoilé est à jour (version 20 ou version du serveur).');
+   if(!pending&&!reg.waiting)tell('Piano étoilé est à jour (version 22 ou version du serveur).');
   }catch(e){tell('Recherche impossible : vérifie ta connexion au serveur de l’application.');}
  };
  navigator.serviceWorker.register('./service-worker.js',{updateViaCache:'none'}).then(r=>{
