@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-// Piano étoilé V18 : calibration spectrale locale, 66 touches réglables, sélection de la source audio.
+// Piano étoilé V19 : calibration spectrale locale, Schubert Etude 61 touches, sélection de la source audio.
 // La reconnaissance polyphonique existante reste en place. Aucune donnée sonore n'est envoyée à un serveur.
 const key='piano-etoile-profiles-v18';
 let trained={};try{trained=JSON.parse(localStorage.getItem(key)||'{}')||{}}catch(e){}
@@ -10,10 +10,10 @@ const persist=()=>{try{localStorage.setItem(key,JSON.stringify(trained))}catch(e
 const wrap=document.createElement('section');wrap.className='calibration-panel';
 wrap.innerHTML='<style>.calibration-panel{border:1px solid #52516b;background:#1b1927;border-radius:14px;padding:13px;margin:0 0 12px;font-size:12px;color:#dcd4e6}.calibration-panel h2{font-size:15px;margin:0 0 6px}.calibration-panel p{line-height:1.5;margin:7px 0}.calrow[hidden]{display:none!important}.calrow{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:9px 0}.calibration-panel button,.calibration-panel select{padding:7px;min-height:36px;font-size:12px;max-width:100%}#calStatus{color:#d8c4ff}#calCount{color:#94e7e1;font-weight:bold}</style>'+
 '<h2>Apprendre les sons de ton piano · Notes et accords</h2>'+
-'<p>Enregistre le timbre de tes vraies touches, en <b>mode piano classique</b>. Joue une seule note à la fois pendant la calibration ; ensuite, la détection cherchera leurs associations dans les accords.</p>'+
+'<p>Enregistre uniquement les <b>61 notes séparément</b>, en son <b>piano classique</b>. Ensuite, le programme tentera de reconnaître des accords de 2, 3, 4 notes et plus : aucune combinaison n’est à enregistrer. Commence avec quelques notes pour tester.</p>'+
 '<div class="calrow"><label for="calInput">Source audio :</label><select id="calInput"><option value="">Entrée automatique Android</option></select><button id="calFind" type="button">Actualiser les entrées</button></div>'+
-'<p><b>Mode casque :</b> brancher ton casque sur le piano ne transmet aucun son au téléphone. Pour jouer silencieusement et analyser les notes, il faut relier une sortie audio du piano à une <b>interface audio avec entrée ligne compatible Android USB-C</b>, éventuellement via un répartiteur pour garder le casque. Démarre avec un volume de sortie très bas. Seules les entrées réellement détectées par Chrome apparaissent ci-dessus.</p>'+
-'<div class="calrow" id="calStartRow" hidden><label for="calFirst">Première note du piano 66 touches :</label><select id="calFirst"></select></div>'+
+'<p><b>Casque branché au piano :</b> tu peux approcher une oreillette du microphone du téléphone, à condition qu’un peu de son s’en échappe. Le micro ne peut pas entendre un casque complètement silencieux à l’extérieur. Pour une écoute plus précise, une interface avec entrée ligne USB-C compatible Android reste une autre possibilité.</p>'+
+'<div class="calrow" id="calStartRow" hidden><label for="calFirst">Première note du Schubert 61 touches :</label><select id="calFirst"></select></div>'+
 '<div class="calrow"><label for="calNote">Note à apprendre :</label><select id="calNote"></select><button id="calRecord" type="button" class="primary">Enregistrer cette note</button><button id="calNext" type="button">Suivante</button><button id="calErase" type="button">Effacer ce profil</button></div>'+
 '<div class="calrow"><span id="calCount">0 note enregistrée</span><span id="calStatus" role="status"></span></div>'+
 '<p>Les notes sont identifiées par leur fréquence et leurs harmoniques ; les combinaisons de notes sont analysées ensemble. Les accords denses, les octaves superposées et les basses peuvent encore être confondus.</p>';
@@ -22,15 +22,23 @@ const message=s=>{$('calStatus').textContent=s};
 const can=n=>n>=FIRST&&n<=PIANO_PROFILES[pianoProfile].workingLast;
 const oldChoose=choosePianoProfile,oldPrepare=mic.prepareTemplates.bind(mic),oldStart=mic.start.bind(mic);
 let recording=false;
-PIANO_PROFILES.current66={first:36,last:101,workingLast:101,label:'Piano actuel · 66 touches (début réglable)',info:'66 touches, première note réglable dans le panneau sonore.'};
-for(const [where,label] of [['pianoProfile','Piano actuel · 66 touches'],['profileMini','66 touches']]){
- const opt=document.createElement('option');opt.value='current66';opt.textContent=label;$(where).appendChild(opt);
+// Le Schubert Etude 61 MKII possède 61 touches, comme le RockJam.
+// La première note du Schubert n'est pas confirmée : elle peut être réglée sans recalibrer des accords.
+let startNote=36;
+try{startNote=Number(localStorage.getItem('piano-etoile-schubert61-start'))||36}catch(e){}
+if(startNote<21||startNote>48)startNote=36;
+for(let n=21;n<=48;n++){
+ const opt=document.createElement('option');
+ opt.value=n;opt.textContent=noteName(n)+' · '+hz(n).toFixed(1)+' Hz';
+ $('calFirst').appendChild(opt);
 }
-let startNote=36;try{startNote=Number(localStorage.getItem('piano-etoile-66-start'))||36}catch(e){}
-if(startNote<21||startNote>43)startNote=36;
-for(let n=21;n<=43;n++){const opt=document.createElement('option');opt.value=n;opt.textContent=noteName(n)+' · '+hz(n).toFixed(1)+' Hz';$('calFirst').appendChild(opt)}
 $('calFirst').value=startNote;
-function setStart(n){const p=PIANO_PROFILES.current66;p.first=n;p.last=n+65;p.workingLast=p.last}
+function setStart(n){
+ const p=PIANO_PROFILES.schubert;
+ p.first=n;p.last=n+60;p.workingLast=p.last;
+ p.label='Schubert Etude 61 MKII · 61 touches · '+noteName(n)+' → '+noteName(n+60);
+ p.info='61 touches jouables · '+noteName(n)+' à '+noteName(n+60);
+}
 setStart(startNote);
 function refreshNotes(){
  const el=$('calNote'),prev=Number(el.value),map=get();el.replaceChildren();
@@ -41,16 +49,17 @@ function refreshNotes(){
  }
  if(can(prev))el.value=prev;
  $('calCount').textContent=count+' / '+total+' touches apprises · enregistrées localement';
- $('calStartRow').hidden=pianoProfile!=='current66';
+ $('calStartRow').hidden=pianoProfile!=='schubert';
 }
 choosePianoProfile=function(id){
  if(recording){message('Attends la fin de la capture.');$('pianoProfile').value=pianoProfile;$('profileMini').value=pianoProfile;return;}
  oldChoose(id);refreshNotes();
 };
 $('calFirst').onchange=()=>{
- if(recording)return;startNote=Number($('calFirst').value);setStart(startNote);
- try{localStorage.setItem('piano-etoile-66-start',String(startNote))}catch(e){}
- if(pianoProfile==='current66')choosePianoProfile('current66');
+ if(recording)return;
+ startNote=Number($('calFirst').value);setStart(startNote);
+ try{localStorage.setItem('piano-etoile-schubert61-start',String(startNote))}catch(e){}
+ if(pianoProfile==='schubert')choosePianoProfile('schubert');
 };
 function next(){const list=[...$('calNote').options].map(o=>Number(o.value)),current=Number($('calNote').value),map=get();
  const n=list.filter(x=>x>current).concat(list.filter(x=>x<=current)).find(x=>!map[x]);
