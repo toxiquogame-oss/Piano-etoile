@@ -604,7 +604,7 @@ const mic={
   // Le seuil ancien (~0.006 en réglage standard) empêchait alors toute analyse.
   const cfg=this.captureSettings(),headset=this.isHeadset();
   const baseGate=headset?cfg.baseGate:.00065*Math.pow(.45,(sensitivity-10)/80);
-   if(this.noiseFrames<5){this.noiseRms=Math.max(this.noiseRms,rms);this.noiseFrames++;}
+   if(this.noiseFrames<5){window.pianoEtoileObserveNoise?.(this);this.noiseRms=Math.max(this.noiseRms,rms);this.noiseFrames++;}
    const gate=Math.max(baseGate,this.noiseRms*(headset?cfg.noiseRatio:2.6));
   $('micLevel').style.width=(Math.min(100,rms*(headset?3000:750)))+'%';
   let candidates=[];
@@ -985,7 +985,7 @@ requestAnimationFrame(layoutKeyboard);
 (function(){
  'use strict';
  // Numéro de build croissant : 27 → V1.27, 99 → V1.99, 100 → V2, 101 → V2.1.
- const APP_BUILD=31;
+ const APP_BUILD=32;
  function formatAppVersion(build){
   const major=1+Math.floor(build/100), minor=build%100;
   return 'V'+major+(minor?'.'+minor:'');
