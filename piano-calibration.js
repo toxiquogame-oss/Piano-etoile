@@ -14,7 +14,7 @@ const persist=()=>{try{localStorage.setItem(key,JSON.stringify(trained))}catch(e
 const wrap=document.createElement('section');wrap.className='calibration-panel';
 wrap.innerHTML='<style>.calibration-panel{border:1px solid #52516b;background:#1b1927;border-radius:14px;padding:13px;margin:0 0 12px;font-size:12px;color:#dcd4e6}.calibration-panel h2{font-size:15px;margin:0 0 6px}.calibration-panel p{line-height:1.5;margin:7px 0}.calrow[hidden]{display:none!important}.calrow{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:9px 0}.calibration-panel button,.calibration-panel select{padding:7px;min-height:36px;font-size:12px;max-width:100%}#calStatus{color:#d8c4ff}#calCount{color:#94e7e1;font-weight:bold}</style>'+
 '<h2>Apprendre les sons de ton piano · Notes et accords</h2>'+
-'<p>Enregistre uniquement les <b>notes jouables séparément</b> en son <b>piano classique</b> : 56 pour ton Schubert (5 aigües cassées), 61 pour le RockJam. Ensuite, le programme tentera de reconnaître les accords sans enregistrer toutes les combinaisons.</p>'+
+'<p>Enregistre uniquement les <b>notes jouables séparément</b> en son <b>piano classique</b> : 61 pour le Schubert et 61 pour le RockJam. Ensuite, le programme tentera de reconnaître les accords sans enregistrer toutes les combinaisons.</p>'+
 '<div class="calrow"><label for="calInput">Source audio :</label><select id="calInput"><option value="">Entrée automatique Android</option></select><button id="calFind" type="button">Actualiser les entrées</button></div>'+
 '<p><b>Casque branché au piano :</b> tu peux approcher une oreillette du microphone du téléphone, à condition qu’un peu de son s’en échappe. Le micro ne peut pas entendre un casque complètement silencieux à l’extérieur. Pour une écoute plus précise, une interface avec entrée ligne USB-C compatible Android reste une autre possibilité.</p>'+
 '<div class="calrow" id="calStartRow" hidden><label for="calFirst">Première note du Schubert 61 touches :</label><select id="calFirst"></select></div>'+
@@ -26,9 +26,8 @@ const message=s=>{$('calStatus').textContent=s};
 const can=n=>n>=FIRST&&n<=PIANO_PROFILES[pianoProfile].workingLast;
 const oldChoose=choosePianoProfile,oldPrepare=mic.prepareTemplates.bind(mic),oldStart=mic.start.bind(mic);
 let recording=false;
-// Le Schubert Etude 61 MKII possède 61 touches. Ses CINQ touches les plus aiguës
-// sont physiquement hors service : elles sont grisées et exclues de la reconnaissance,
-// de la calibration et des notes attendues dans les MIDI.
+// Le Schubert Etude 61 MKII possède 61 touches, toutes utilisables.
+// Les cinq touches aiguës ont été réactivées.
 // La première note du Schubert n'est pas confirmée : elle peut être réglée.
 let startNote=36;
 try{startNote=Number(localStorage.getItem('piano-etoile-schubert61-start'))||36}catch(e){}
@@ -41,9 +40,9 @@ for(let n=21;n<=48;n++){
 $('calFirst').value=startNote;
 function setStart(n){
  const p=PIANO_PROFILES.schubert;
- p.first=n;p.last=n+60;p.workingLast=p.last-5;
- p.label='Schubert Etude 61 MKII · 61 touches · 5 aigües HS';
- p.info='56 touches utilisables sur 61 · '+noteName(n)+' à '+noteName(n+55)+'. Les 5 plus aigües sont hors service.';
+ p.first=n;p.last=n+60;p.workingLast=p.last;
+ p.label='Schubert Etude 61 MKII · 61 touches';
+ p.info='61 touches utilisables sur 61 · '+noteName(n)+' à '+noteName(n+60)+'.';
 }
 setStart(startNote);
 function refreshNotes(){

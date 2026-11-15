@@ -1,6 +1,6 @@
 # Piano étoilé 🌟🎹
 
-Application Web progressive (PWA) pour apprendre le piano avec les profils RockJam RJ361 (61 touches) et Schubert (88 touches, cinq touches aiguës signalées hors service).
+Application Web progressive (PWA) pour apprendre le piano avec les profils RockJam RJ361 (61 touches) et Schubert Etude 61 MKII (61 touches, toutes utilisables).
 
 Ouvrir le site GitHub Pages sur Chrome Android, puis « Installer l'application » ou « Ajouter à l'écran d'accueil ».
 
