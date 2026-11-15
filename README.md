@@ -12,6 +12,12 @@ Pour les mises à jour : remplacer les fichiers sur la branche `main`, incrémen
 
 Numérotation affichée : le build 27 correspond à `V1.27`, 99 à `V1.99`, 100 à `V2`, 101 à `V2.1`, puis 200 à `V3`. Le titre, l’en-tête et le pied de page sont synchronisés à partir de `APP_BUILD`.
 
+## V1.30 — écoute au casque
+
+- Sélecteur Normal / Casque · sons faibles, conservé sur l’appareil. Le mode Casque réduit les seuils selon la sensibilité du micro, y compris lors de la calibration.
+- La mesure du bruit de fond, la validation de fréquence et plusieurs trames successives restent nécessaires : le silence ne valide pas une note. Approcher une oreillette du micro, sans monter le volume à un niveau dangereux.
+- Les profils et morceaux locaux ne sont pas effacés. La détection demeure expérimentale et ne peut pas reconnaître un casque inaudible pour le micro.
+
 ## V1.28 — entraînement et lumières
 
 - Score local : notes correctes, erreurs, précision, série, progression et meilleur résultat par morceau, profil, main et passage. La mesure micro est expérimentale.

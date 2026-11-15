@@ -17,7 +17,7 @@ wrap.innerHTML='<style>.calibration-panel{border:1px solid #52516b;background:#1
 '<h2>Apprendre les sons de ton piano · Notes et accords</h2>'+
 '<p>Enregistre uniquement les <b>notes jouables séparément</b> en son <b>piano classique</b> : 61 pour le Schubert et 61 pour le RockJam. Ensuite, le programme tentera de reconnaître les accords sans enregistrer toutes les combinaisons.</p>'+
 '<div class="calrow"><label for="calInput">Source audio :</label><select id="calInput"><option value="">Entrée automatique Android</option></select><button id="calFind" type="button">Actualiser les entrées</button></div>'+
-'<p><b>Casque branché au piano :</b> tu peux approcher une oreillette du microphone du téléphone, à condition qu’un peu de son s’en échappe. Le micro ne peut pas entendre un casque complètement silencieux à l’extérieur. Pour une écoute plus précise, une interface avec entrée ligne USB-C compatible Android reste une autre possibilité.</p>'+
+'<p><b>Casque branché au piano :</b> sélectionne « Casque · sons faibles » dans Type d’écoute au-dessus, puis approche une oreillette du microphone du téléphone, à condition qu’un peu de son s’en échappe. Le micro ne peut pas entendre un casque complètement silencieux à l’extérieur. Pour une écoute plus précise, une interface avec entrée ligne USB-C compatible Android reste une autre possibilité.</p>'+
 '<div class="calrow" id="calStartRow" hidden><label for="calFirst">Première note du Schubert 61 touches :</label><select id="calFirst"></select></div>'+
 '<div class="calrow"><label for="calNote">Note à apprendre :</label><select id="calNote"></select><button id="calRecord" type="button" class="primary">Enregistrer cette note</button><button id="calNext" type="button">Suivante</button><button id="calErase" type="button">Effacer ce profil</button></div>'+
 '<div class="calrow"><span id="calCount">0 note enregistrée</span><span id="calStatus" role="status"></span></div>'+
@@ -126,7 +126,7 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function record(){
  if(recording)return;
  recording=true;window.pianoEtoileCalibrating=true;
- const ids=['calRecord','calErase','calNext','calNote','calInput','calFirst','calFind'];
+ const ids=['calRecord','calErase','calNext','calNote','calInput','calFirst','calFind','micMode','micSensitivity'];
  for(const id of ids)$(id).disabled=true;
  try{
   if(!mic.enabled)await mic.start();
@@ -143,7 +143,8 @@ async function record(){
   await pause(450);
   let noise=0,noisePeak=0;
   for(let j=0;j<7;j++){noise=Math.max(noise,sample());noisePeak=Math.max(noisePeak,mic.notePeak(spec,n)?.amp||0);await pause(85);}
-  const gate=Math.max(.00030,noise*2.2),signalPeak=Math.max(.000075,noisePeak*3);
+  const cfg=mic.captureSettings();
+  const gate=Math.max(cfg.baseGate,noise*cfg.noiseRatio),signalPeak=Math.max(cfg.peakFloor,noisePeak*cfg.peakRatio);
   message('Joue '+noteName(n)+' maintenant et garde la touche appuyée environ 2 secondes.');
   let count=0,consecutive=0;
   const deadline=performance.now()+30000;
@@ -156,9 +157,9 @@ async function record(){
      for(let b=Math.max(2,Math.round(at)-2);b<=Math.min(spec.length-2,Math.round(at)+2);b++)amp=Math.max(amp,Math.pow(10,Math.max(-110,spec[b])/20));
      sums[h-1]+=amp;
     }
-    if(consecutive>=8&&count>=8){
+    if(consecutive>=cfg.frames&&count>=cfg.frames){
      const ratios=Array.from(sums,x=>x/count),max=Math.max(...ratios);
-     if(max<.000075)throw Error('Son trop faible : rapproche le micro et réessaie.');
+     if(max<cfg.peakFloor)throw Error('Son trop faible : rapproche le micro et réessaie.');
      get()[n]=ratios.map(x=>Math.max(.025,Math.min(1,Number((x/max).toFixed(3)))));
      persist();mic.prepareTemplates();refreshNotes();next();
      message(noteName(n)+' vérifié et mémorisé. Relâche la touche avant la prochaine capture.');return;

@@ -201,6 +201,7 @@ body.immersive-open{overflow:hidden}
   <span id="micDetected" class="mic-notes" aria-live="off">Notes entendues : —</span>
  </div>
  <label class="label" for="micSensitivity">Sensibilité <input id="micSensitivity" type="range" min="10" max="90" step="5" value="40" aria-label="Sensibilité du micro"> <span id="micSensitivityValue">40 %</span></label>
+ <label class="label" for="micMode">Type d’écoute <select id="micMode" aria-label="Type d’écoute audio"><option value="normal">Normal · haut-parleurs</option><option value="headset">Casque · sons faibles</option></select></label>
  <span class="mic-help">Option indépendante : micro du téléphone, pas d'Internet requis · réservé à l'avancement en mode apprentissage</span>
  <div id="micPermissionHelp" class="mic-permission-help" role="status" aria-live="polite">Pour afficher la demande d'accès, appuie sur « Autoriser le microphone ». En cas de blocage, ouvre l’application depuis une adresse HTTPS plutôt qu’un fichier téléchargé.</div>
 </section>
@@ -428,6 +429,11 @@ const mic={
  spectrum:null,samples:null,linear:null,frameId:0,lastScan:0,tracks:new Map(),
  detected:new Set(),lastSeen:new Map(),fired:new Map(),generation:0,templates:[],gram:[],
  framePeriod:85,fftSize:16384,confidence:[],lastInfoAt:0,noiseRms:0,noiseFrames:0,
+ isHeadset(){return $('micMode').value==='headset'},
+ captureSettings(){
+  const s=Math.max(0,Math.min(1,(Number($('micSensitivity').value)-10)/80));
+  return this.isHeadset()?{baseGate:.00020*Math.pow(.20,s),noiseRatio:1.9-.35*s,peakFloor:.000025*Math.pow(.48,s),peakRatio:2.7-.5*s,peakDb:-99,peakBg:3,cents:48,frames:5}:{baseGate:.00030,noiseRatio:2.2,peakFloor:.000075,peakRatio:3,peakDb:-85,peakBg:4,cents:65,frames:8};
+ },
  sampleRms(){
   let s=0,q=0,count=0;for(let j=0;j<this.samples.length;j+=4){const x=this.samples[j];s+=x;q+=x*x;count++;}
   return Math.sqrt(Math.max(0,q/count-(s/count)**2));
@@ -436,13 +442,14 @@ const mic={
   const step=this.ctx.sampleRate/this.fftSize,f=440*Math.pow(2,(n-69)/12),at=f/step;
   let k=Math.round(at),best=-Infinity;
   for(let j=Math.max(2,Math.floor(at)-2);j<=Math.min(spec.length-3,Math.ceil(at)+2);j++)if(spec[j]>=spec[j-1]&&spec[j]>=spec[j+1]&&spec[j]>best){k=j;best=spec[j];}
-  if(!Number.isFinite(best)||best< -85)return null;
+  const cfg=this.captureSettings();
+  if(!Number.isFinite(best)||best<cfg.peakDb)return null;
   const a=spec[k-1],b=spec[k],c=spec[k+1],den=a-2*b+c;
   const offset=Number.isFinite(den)&&den<0?Math.max(-.5,Math.min(.5,.5*(a-c)/den)):0;
   const cents=1200*Math.log2((k+offset)*step/f);
   let bg=0,count=0;for(let j=Math.max(1,k-16);j<=Math.min(spec.length-1,k+16);j++){if(Math.abs(j-k)<=3)continue;bg+=Math.pow(10,Math.max(-110,spec[j])/20);count++;}
   const amp=Math.pow(10,best/20);
-  if(Math.abs(cents)>65||amp<Math.max(0.000056,4*bg/Math.max(1,count)))return null;
+  if(Math.abs(cents)>cfg.cents||amp<Math.max(this.isHeadset()?cfg.peakFloor:0.000056,cfg.peakBg*bg/Math.max(1,count)))return null;
   return {amp,cents};
  },
  setMessage(msg){$('micStatus').textContent=msg},
@@ -591,10 +598,11 @@ const mic={
   const sensitivity=Number($('micSensitivity').value);
   // Une oreillette de casque près du téléphone produit souvent un signal faible.
   // Le seuil ancien (~0.006 en réglage standard) empêchait alors toute analyse.
-  const baseGate=.00065*Math.pow(.45,(sensitivity-10)/80);
+  const cfg=this.captureSettings(),headset=this.isHeadset();
+  const baseGate=headset?cfg.baseGate:.00065*Math.pow(.45,(sensitivity-10)/80);
    if(this.noiseFrames<5){this.noiseRms=Math.max(this.noiseRms,rms);this.noiseFrames++;}
-   const gate=Math.max(baseGate,this.noiseRms*2.6);
-  $('micLevel').style.width=(Math.min(100,rms*750))+'%';
+   const gate=Math.max(baseGate,this.noiseRms*(headset?cfg.noiseRatio:2.6));
+  $('micLevel').style.width=(Math.min(100,rms*(headset?3000:750)))+'%';
   let candidates=[];
   if(rms>gate&&this.noiseFrames>=5&&!window.pianoEtoileCalibrating){
     this.analyser.getFloatFrequencyData(this.spectrum);
@@ -667,6 +675,12 @@ $('micPermission').onclick=()=>{
 };
 $('micMini').onclick=()=>mic.toggle();
 $('micSensitivity').addEventListener('input',()=>{$('micSensitivityValue').textContent=$('micSensitivity').value+' %'});
+ $('micMode').value=readLocal('piano-etoile-audio-mode','normal')==='headset'?'headset':'normal';
+ $('micMode').addEventListener('change',()=>{
+  writeLocal('piano-etoile-audio-mode',$('micMode').value);
+  mic.noiseRms=0;mic.noiseFrames=0;mic.tracks.clear();mic.lastSeen.clear();mic.fired.clear();
+  if(mic.enabled)mic.setMessage(mic.isHeadset()?'Mode Casque · reste silencieux un instant.':'Mode Normal · reste silencieux un instant.');
+ });
 window.addEventListener('pagehide',()=>{if(mic.enabled)mic.stop()});
 
 // Bascule de clavier sans modifier les six MIDI originaux ni la préférence micro.
@@ -967,7 +981,7 @@ requestAnimationFrame(layoutKeyboard);
 (function(){
  'use strict';
  // Numéro de build croissant : 27 → V1.27, 99 → V1.99, 100 → V2, 101 → V2.1.
- const APP_BUILD=29;
+ const APP_BUILD=30;
  function formatAppVersion(build){
   const major=1+Math.floor(build/100), minor=build%100;
   return 'V'+major+(minor?'.'+minor:'');
