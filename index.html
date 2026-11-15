@@ -154,6 +154,26 @@ body.immersive-open{overflow:hidden}
 #handMini{display:none;font-size:11px;min-height:30px;padding:5px 7px;max-width:120px}
 .stage.immersive #handMini{display:inline-block}
 @media (orientation:landscape) and (max-height:500px){.stage.immersive #handMini{font-size:10px;min-height:28px;padding:4px 5px;max-width:100px}}
+
+.hand-swatch.left{background:var(--left-hand)}.hand-swatch.right{background:var(--right-hand)}
+/* V1.28 : entraînement, mémorisation locale et éclairage. */
+.practice-panel{background:#19151f;border:1px solid #55445d;border-radius:14px;margin:12px 0;padding:12px 14px;font-size:13px}
+.practice-panel summary{cursor:pointer;font-weight:700;color:#f1d4e4;padding:4px 0}
+.practice-panel h3{font-size:14px;margin:14px 0 7px}
+.practice-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0}
+.practice-row button,.practice-row select{min-height:36px;padding:7px 10px;font-size:12px}
+.practice-row input[type=number]{background:#2c2633;color:#fff;border:1px solid #51424f;border-radius:8px;padding:8px;width:82px}
+.practice-row input[type=color]{width:37px;height:32px;border:0;background:none;cursor:pointer}
+.practice-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(83px,1fr));gap:7px;margin:9px 0}
+.practice-stats div{background:#26202e;border:1px solid #413347;border-radius:9px;padding:8px;text-align:center;color:#cbbfd1;font-size:11px}
+.practice-stats strong{display:block;font-size:20px;color:#fff;font-variant-numeric:tabular-nums}
+.practice-panel p{color:#cbbfd1;margin:7px 0;line-height:1.45}
+.led.on.left-hand{background:var(--left-hand);border-color:var(--left-hand);box-shadow:0 0 10px 3px var(--left-hand)}
+.led.on.right-hand{background:var(--right-hand);border-color:var(--right-hand);box-shadow:0 0 10px 3px var(--right-hand)}
+.ledrail.pulse .led.on{animation:practice-pulse .9s ease-in-out infinite alternate}
+.ledrail.soft .led.on{box-shadow:0 0 4px 1px currentColor}
+@keyframes practice-pulse{to{filter:brightness(.5);transform:translateX(-50%) scale(.8)}}
+@media(prefers-reduced-motion:reduce){.ledrail.pulse .led.on{animation:none}}
 </style>
 <script defer src="./piano-calibration.js"></script>
 </head>
@@ -205,7 +225,23 @@ body.immersive-open{overflow:hidden}
 <div class="scroll" id="scroller"><div class="playfield" id="playfield"><canvas id="roll" width="1008" height="285" aria-label="Partition de notes descendantes"></canvas><div class="ledrail" id="ledrail"></div><div class="keyboard" id="keyboard"></div></div></div><div class="stage-hint" id="stageHint">Astuce : en plein écran, toutes les touches sont affichées automatiquement. Le bouton « + MIDI » permet d'importer un morceau sans quitter le plein écran.</div>
 </div>
 <div class="progress"><span id="counter">0 / 0 notes</span><div class="track"><div class="fill" id="fill"></div></div><span id="clock">00:00</span></div>
-<div class="info"><div class="infobox"><strong>Pour tester sur ton téléphone</strong><p>1. Pour tester ton vrai RockJam, active <b>🎙 Détection sonore</b> et autorise le microphone. 2. Choisis <b>Apprentissage</b> puis <b>Jouer</b>. 3. Joue les notes ou accords indiqués : l’application essaiera de les reconnaître et d’avancer. <b>Pour revenir au fonctionnement tactile, désactive la détection.</b> Le son de piano du site est facultatif : baisse son volume pour éviter les fausses détections.</p></div><div class="infobox"><strong>État du projet</strong><p>Six arrangements MIDI sont inclus publiquement et une démonstration est disponible ; les autres fichiers importés restent locaux sur cet appareil. Deux profils de clavier sont disponibles. Violet sous C4 (main gauche), rose à partir de C4 (main droite). Les six morceaux de la V13 sont de nouveau intégrés. Les notes impossibles dépendent du clavier choisi : RockJam Do2–Do7 ; Schubert Etude 61 MKII : les 61 touches sont utilisables, y compris les cinq plus aiguës. La première note peut être réglée dans le panneau de calibration. Le lecteur conserve le tempo et ses changements (vitesse 100 %). Le son utilise des enregistrements d'un vrai piano à queue Yamaha C5. La V23 ajoute l’apprentissage d’une seule main avec accompagnement automatique de l’autre. La V22 améliore la détection micro des sons faibles et reconnaît séparément les notes jouables et tente de distinguer les accords à l'octave sans apprendre toutes les combinaisons et une sélection de source audio pour les interfaces USB-C compatibles. Les accords restent expérimentaux. La précision varie selon le bruit, le son du piano, les accords et la distance. Le ruban LED réel et l’ESP32 ne sont pas encore connectés. Si l’autorisation micro échoue en fichier HTML local, Chrome peut exiger une page HTTPS.</p></div></div>
+<details class="practice-panel" open>
+<summary>✦ Entraînement &amp; lumières</summary>
+<div class="practice-stats" aria-label="Statistiques de la session">
+<div><strong id="practiceCorrect">0</strong>Notes correctes</div><div><strong id="practiceErrors">0</strong>Erreurs</div><div><strong id="practiceAccuracy">—</strong>Précision</div><div><strong id="practiceStreak">0</strong>Série</div>
+</div>
+<p id="practiceRecord">Aucun résultat enregistré.</p>
+<p>Résultats du mode apprentissage, enregistrés sur cet appareil. Avec le micro, les erreurs restent des estimations.</p>
+<h3>Travailler un passage en boucle</h3>
+<div class="practice-row"><label for="loopFrom">Début (s)</label><input id="loopFrom" type="number" min="0" step="0.1" value="0"><label for="loopTo">Fin (s)</label><input id="loopTo" type="number" min="0.1" step="0.1" value="10"><button id="loopApply" type="button">Activer la boucle</button><button id="loopOff" type="button" disabled>Tout le morceau</button></div>
+<p id="loopStatus" role="status">Morceau entier.</p>
+<h3>Personnaliser les lumières</h3>
+<div class="practice-row"><label for="leftColor">Gauche</label><input id="leftColor" type="color" value="#aa72ff"><label for="rightColor">Droite</label><input id="rightColor" type="color" value="#ff65a6"><label for="ledEffect">Effet</label><select id="ledEffect"><option value="steady">Fixe</option><option value="pulse">Pulsation</option><option value="soft">Doux</option></select><button id="ledDefaults" type="button">Par défaut</button></div>
+<h3>Ruban LED · ESP32 (Bluetooth)</h3>
+<div class="practice-row"><button id="bleConnect" type="button">Connecter l’ESP32</button><button id="bleDisconnect" type="button" disabled>Déconnecter</button><label for="ledBrightness">Luminosité <input id="ledBrightness" type="range" min="5" max="30" value="15"><span id="ledBrightnessValue">15 %</span></label></div>
+<p id="bleStatus" role="status">Non connecté. Nécessite un ESP32 programmé avec le protocole Piano étoilé.</p>
+</details>
+<div class="info"><div class="infobox"><strong>Pour tester sur ton téléphone</strong><p>1. Pour tester ton vrai RockJam, active <b>🎙 Détection sonore</b> et autorise le microphone. 2. Choisis <b>Apprentissage</b> puis <b>Jouer</b>. 3. Joue les notes ou accords indiqués : l’application essaiera de les reconnaître et d’avancer. <b>Pour revenir au fonctionnement tactile, désactive la détection.</b> Le son de piano du site est facultatif : baisse son volume pour éviter les fausses détections.</p></div><div class="infobox"><strong>État du projet</strong><p>Six arrangements MIDI sont inclus publiquement et une démonstration est disponible ; les autres fichiers importés restent locaux sur cet appareil. Deux profils de clavier sont disponibles. Violet sous C4 (main gauche), rose à partir de C4 (main droite). Les six morceaux de la V13 sont de nouveau intégrés. Les notes impossibles dépendent du clavier choisi : RockJam Do2–Do7 ; Schubert Etude 61 MKII : les 61 touches sont utilisables, y compris les cinq plus aiguës. La première note peut être réglée dans le panneau de calibration. Le lecteur conserve le tempo et ses changements (vitesse 100 %). Le son utilise des enregistrements d'un vrai piano à queue Yamaha C5. La V23 ajoute l’apprentissage d’une seule main avec accompagnement automatique de l’autre. La V22 améliore la détection micro des sons faibles et reconnaît séparément les notes jouables et tente de distinguer les accords à l'octave sans apprendre toutes les combinaisons et une sélection de source audio pour les interfaces USB-C compatibles. Les accords restent expérimentaux. La précision varie selon le bruit, le son du piano, les accords et la distance. La V1.28 ajoute les statistiques locales, les boucles de pratique, les couleurs personnalisées et une interface Bluetooth pour un ESP32 compatible. Le ruban physique nécessite encore son programme et son câblage. Si l’autorisation micro échoue en fichier HTML local, Chrome peut exiger une page HTTPS.</p></div></div>
 </main>
 <footer>Piano : Salamander Grand Piano V3 par Alexander Holm, licence <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a> · Échantillons servis par <a href="https://tonejs.github.io/audio/salamander/">Tone.js</a>. Une connexion est nécessaire pour charger les enregistrements.<p>Les six arrangements intégrés sont publiquement accessibles dans le code de cette application. Les autres fichiers MIDI que tu importes restent locaux sur cet appareil.</p><p class="app-version">Piano étoilé · <span data-app-version></span></p></footer>
 <script>
@@ -220,7 +256,7 @@ let pianoProfile='rockjam',FIRST=36,LAST=96,TOTAL_WIDTH=1008;
 const MIDDLE_C=60,WHITE_WIDTH=28,BASE_ROLL_HEIGHT=285,BASE_LED_HEIGHT=23,BASE_KEYBOARD_HEIGHT=153,BASE_TOTAL_HEIGHT=461;
 const canPlay=n=>n>=FIRST&&n<=PIANO_PROFILES[pianoProfile].workingLast;
 const handOf=n=>n<MIDDLE_C?'left-hand':'right-hand';
-const handColor=n=>n<MIDDLE_C?'#aa72ff':'#ff65a6';
+const handColor=n=>n<MIDDLE_C?lighting.left:lighting.right;
 const $=id=>document.getElementById(id);
 const isBlack=n=>[1,3,6,8,10].includes(n%12);
 const octave=n=>Math.floor(n/12)-1;
@@ -305,20 +341,36 @@ window.addEventListener('orientationchange',()=>setTimeout(layoutKeyboard,200));
 
 let handMode='both',requiredSteps=0,autoCursor=0;
  const userPlays=n=>mode==='auto'||handMode==='both'||(handMode==='left'?n.m<MIDDLE_C:n.m>=MIDDLE_C);
- let mode='learn',playing=false,songTime=0,currentGroup=0,waiting=false,done=0,lastFrame=0,speed=1,scrollLast=0;
+ let mode='learn',playing=false,songTime=0,currentGroup=0,waiting=false,done=0,lastFrame=0,speed=1,scrollLast=0,frameRequest=0;
+let lighting={left:'#aa72ff',right:'#ff65a6',effect:'steady',brightness:15};
+const LIGHT_KEY='piano-etoile-lighting-v1',STATS_KEY='piano-etoile-training-v1';
+function readLocal(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')||fallback}catch(e){return fallback}}
+function writeLocal(key,value){try{localStorage.setItem(key,JSON.stringify(value))}catch(e){}}
+const savedLighting=readLocal(LIGHT_KEY,{});
+for(const k of ['left','right'])if(/^#[0-9a-f]{6}$/i.test(savedLighting[k]||''))lighting[k]=savedLighting[k];
+if(['steady','pulse','soft'].includes(savedLighting.effect))lighting.effect=savedLighting.effect;
+if(Number.isFinite(savedLighting.brightness))lighting.brightness=Math.min(30,Math.max(5,savedLighting.brightness));
+let stats=readLocal(STATS_KEY,{});if(typeof stats!=='object'||Array.isArray(stats))stats={};
+let session={correct:0,errors:0,streak:0,bestStreak:0},loopRange=null,songDuration=0;
 let songs=[],selectedSong={id:'initial',name:'Démonstration incluse · importe tes MIDI',notes:[]},activeNotes=[],groups=[];
 function buildGroups(notes){const a=[];for(const nt of notes){let grp=a[a.length-1];if(!grp||Math.abs(grp.t-nt.t)>0.055){grp={t:nt.t,notes:[],practice:[],backing:[],remaining:new Set()};a.push(grp)}grp.notes.push(nt);if(userPlays(nt)){grp.practice.push(nt);grp.remaining.add(nt.m)}else grp.backing.push(nt)}return a}
  function setHandMode(next){if(!['both','left','right'].includes(next))return;handMode=next;$('handMode').value=next;$('handMini').value=next;prepareSong(selectedSong)}
  $('handMode').onchange=e=>setHandMode(e.target.value);
  $('handMini').onchange=e=>setHandMode(e.target.value);
 function prepareSong(s){
+ if(s.id!==selectedSong.id)loopRange=null;
  selectedSong=s;
  const playable=s.notes.filter(n=>canPlay(n.m));
  const offset=playable.length?playable[0].t:0;
- activeNotes=playable.map(n=>({...n,t:n.t-offset}));
+ const full=playable.map(n=>({...n,t:n.t-offset}));
+ songDuration=full.reduce((end,n)=>Math.max(end,n.t+n.d),0);
+ if(loopRange&&!full.some(n=>n.t>=loopRange.from&&n.t<loopRange.to&&userPlays(n)))loopRange=null;
+ activeNotes=loopRange?full.filter(n=>n.t>=loopRange.from&&n.t<loopRange.to).map(n=>({...n,t:n.t-loopRange.from,d:Math.min(n.d,loopRange.to-n.t)})):full;
+ session={correct:0,errors:0,streak:0,bestStreak:0};
+ refreshLoop();
  groups=buildGroups(activeNotes);requiredSteps=groups.filter(g=>g.practice.length).length;songTime=0;currentGroup=0;done=0;autoCursor=0;stop(false);
  $('nowTitle').textContent=s.name;
- const ignored=s.notes.length-activeNotes.length;
+ const ignored=s.notes.length-playable.length;
  $('profileInfo').textContent=PIANO_PROFILES[pianoProfile].info+(ignored?' · '+ignored+' notes MIDI hors plage ignorées.':'');
  updateUI();draw();const firstPractice=activeNotes.find(userPlays);if(firstPractice)autoScroll(firstPractice.m,true);
 }
@@ -565,6 +617,8 @@ const mic={
   if(mode==='learn'&&playing&&waiting){
    const group=expectedGroup();
    if(group){
+    // Les nouvelles notes reconnues non attendues sont des erreurs estimées.
+    for(const n of newly){if(!this.lastSeen.has(n)&&userPlays({m:n})&&!group.notes.some(p=>p.m===n))recordAttempt(false);}
     // Un accord progresse dès que toutes ses notes ont été entendues :
     // onKey gère les notes restantes indépendamment, y compris simultanément.
     for(const n of [...group.remaining]){
@@ -611,20 +665,20 @@ $('profileMini').addEventListener('change',e=>choosePianoProfile(e.target.value)
 rebuildKeyboard();
 function setMode(next){mode=next;$('handMode').disabled=mode==='auto';$('handMini').disabled=mode==='auto';$('learn').classList.toggle('selected',mode==='learn');$('auto').classList.toggle('selected',mode==='auto');$('learn').setAttribute('aria-pressed',String(mode==='learn'));$('auto').setAttribute('aria-pressed',String(mode==='auto'));prepareSong(selectedSong)}
 $('learn').onclick=()=>setMode('learn');$('auto').onclick=()=>setMode('auto');
-function stop(resetTime=true){playing=false;waiting=false;lastFrame=0;$('start').textContent='▶ Jouer';if(resetTime){songTime=0;currentGroup=0;done=0;autoCursor=0};clearLeds();updateUI()}
+function stop(resetTime=true){if(frameRequest)cancelAnimationFrame(frameRequest);frameRequest=0;playing=false;waiting=false;lastFrame=0;$('start').textContent='▶ Jouer';if(resetTime){songTime=0;currentGroup=0;done=0;autoCursor=0};clearLeds();updateUI()}
  function playBacking(g){for(const n of g.backing)audio.backing(n.m,(n.v||90)/127,n.d/Math.max(.25,speed))}
- function finishLearning(){playing=false;waiting=false;$('start').textContent='▶ Rejouer';updateUI();draw()}
+ function finishLearning(){saveTraining(true);if(loopRange&&requiredSteps>0){restartPass();return}playing=false;waiting=false;$('start').textContent='▶ Rejouer';updateUI();draw()}
  function enterGroup(g){
   if(g.practice.length){waiting=true;g.remaining=new Set(g.practice.map(n=>n.m));}
   else{playBacking(g);currentGroup++;waiting=false;}
   updateUI();
  }
  function start(){if(mode==='learn'&&handMode!=='both')void audio.unlockBacking();else void audio.unlock();if(!activeNotes.length)return;
-  if(playing){playing=false;lastFrame=0;$('start').textContent='▶ Reprendre';updateUI();return}
-  if(currentGroup>=groups.length || songTime>=lastEnd()+.2){songTime=0;currentGroup=0;done=0;autoCursor=0;waiting=false}
+  if(playing){if(frameRequest)cancelAnimationFrame(frameRequest);frameRequest=0;playing=false;lastFrame=0;$('start').textContent='▶ Reprendre';updateUI();return}
+  if(currentGroup>=groups.length || songTime>=lastEnd()+.2){restartPass()}
   playing=true;$('start').textContent='⏸ Pause';lastFrame=0;
   if(mode==='learn'&&!waiting&&currentGroup===0&&groups[0].t===0&&groups[0].practice.length)enterGroup(groups[0]);
-  updateUI();requestAnimationFrame(tick)
+  updateUI();scheduleTick()
  }
  $('start').onclick=start;
  $('reset').onclick=()=>{prepareSong(selectedSong);$('start').textContent='▶ Jouer'};
@@ -639,28 +693,31 @@ function stop(resetTime=true){playing=false;waiting=false;lastFrame=0;$('start')
   $('helpText').textContent=mode==='learn'?(solo?(requiredSteps?(handMode==='left'?'Main gauche à jouer · main droite automatique.':'Main droite à jouer · main gauche automatique.'):'Aucune note jouable pour cette main dans ce morceau.')+(mic.enabled?' Utilise des écouteurs pour éviter que le micro entende l’accompagnement.':''):(mic.enabled?'Micro actif : joue sur le vrai piano les notes attendues.':'La musique attend la bonne touche.')):'Les notes et les sons suivent le morceau.';
   $('counter').textContent=done+' / '+requiredSteps+' étapes';$('fill').style.width=(requiredSteps?Math.min(100,done/requiredSteps*100):finished?100:0)+'%';
   $('clock').textContent=Math.floor(songTime/60).toString().padStart(2,'0')+':'+Math.floor(songTime%60).toString().padStart(2,'0');
+  refreshTraining();syncLighting();
   if(g&&g.remaining.size)autoScroll([...g.remaining][0]);
  }
  function onKey(n,fromMicro=false){if(!canPlay(n)||!keys.has(n))return;
   if(!fromMicro){void audio.unlock();audio.note(n,.75,.65);}
   const k=keys.get(n);k.classList.add('pressed');setTimeout(()=>k.classList.remove('pressed'),130);
   const g=expectedGroup();if(!g)return;
-  if(!g.remaining.has(n)){if(userPlays({m:n}))$('expected').textContent='Essaie '+[...g.remaining].map(noteName).join(' + ');return}
-  g.remaining.delete(n);if(g.remaining.size===0){playBacking(g);waiting=false;done++;currentGroup++;
+  if(!g.remaining.has(n)){if(userPlays({m:n})&&!g.practice.some(p=>p.m===n)){recordAttempt(false);$('expected').textContent='Essaie '+[...g.remaining].map(noteName).join(' + ');}return}
+  g.remaining.delete(n);recordAttempt(true);if(g.remaining.size===0){playBacking(g);waiting=false;done++;currentGroup++;
+  if(currentGroup<groups.length)saveTraining(false);
   if(currentGroup>=groups.length){finishLearning();return}
   }updateUI();draw()
  }
- function tick(ms){if(!playing)return;if(!lastFrame)lastFrame=ms;const dt=Math.min(.05,Math.max(0,(ms-lastFrame)/1000));lastFrame=ms;
+ function scheduleTick(){if(!frameRequest)frameRequest=requestAnimationFrame(tick)}
+ function tick(ms){frameRequest=0;if(!playing)return;if(!lastFrame)lastFrame=ms;const dt=Math.min(.05,Math.max(0,(ms-lastFrame)/1000));lastFrame=ms;
   if(mode==='auto'){
    songTime+=dt*speed;
    while(autoCursor<activeNotes.length&&activeNotes[autoCursor].t<=songTime+1e-6){const n=activeNotes[autoCursor++];audio.note(n.m,(n.v||90)/127,n.d/Math.max(.25,speed));}
    const newDone=groups.filter(g=>g.t<=songTime).length;if(newDone!==done){done=newDone;currentGroup=done;updateUI()}
-   if(songTime>=lastEnd()+.65){stop(false);songTime=lastEnd();done=groups.length;updateUI();draw();return}
+   if(songTime>=lastEnd()+.65){if(loopRange){restartPass();scheduleTick();return}stop(false);songTime=lastEnd();done=groups.length;updateUI();draw();return}
   }else if(!waiting){
-   const target=groups[currentGroup];if(!target){finishLearning();return}
+   const target=groups[currentGroup];if(!target){finishLearning();if(playing)scheduleTick();return}
    songTime=Math.min(target.t,songTime+dt*speed);if(songTime>=target.t-1e-5)enterGroup(target);
   }
-  draw();if(playing)requestAnimationFrame(tick)
+  syncLighting();draw();if(playing)scheduleTick()
  }
 function draw(){const c=ctx2;c.clearRect(0,0,TOTAL_WIDTH,285);c.fillStyle='#11101a';c.fillRect(0,0,TOTAL_WIDTH,285);
  for(let n=FIRST;n<=LAST;n++){const x=center[n];c.fillStyle=isBlack(n)?'#2b2731':'#201c2a';c.fillRect(x-.5,0,1,285)}
@@ -681,6 +738,102 @@ function draw(){const c=ctx2;c.clearRect(0,0,TOTAL_WIDTH,285);c.fillStyle='#1110
  c.fillStyle='#ff4a6c';c.fillRect(0,281,TOTAL_WIDTH,3);
 }
 function autoScroll(n,instant=false){const sc=$('scroller'),x=center[n]-sc.clientWidth/2;if(!fitKeys&&!immersive&&sc.clientWidth<850&&Math.abs(sc.scrollLeft-x)>80){sc.scrollTo({left:Math.max(0,x),behavior:instant?'instant':'smooth'})}}
+// Statistiques par morceau, profil, main et passage. Les lectures automatiques ne comptent pas.
+function trainingKey(){return [selectedSong.id,pianoProfile,handMode,loopRange?loopRange.from+'-'+loopRange.to:'entier'].join('|')}
+function accuracy(){const total=session.correct+session.errors;return total?Math.round(100*session.correct/total):null}
+function recordAttempt(correct){if(mode!=='learn'||!playing)return;if(correct){session.correct++;session.streak++;session.bestStreak=Math.max(session.bestStreak,session.streak)}else{session.errors++;session.streak=0}saveTraining(false);refreshTraining()}
+function saveTraining(completed){
+ if(mode!=='learn'||!session.correct&&!session.errors)return;
+ const key=trainingKey(),old=stats[key]||{best:0,completed:0};
+ stats[key]={best:completed?Math.max(old.best||0,accuracy()||0):old.best||0,completed:(old.completed||0)+(completed?1:0),last:{correct:session.correct,errors:session.errors,accuracy:accuracy(),steps:completed?requiredSteps:done,total:requiredSteps,streak:session.bestStreak}};
+ writeLocal(STATS_KEY,stats);
+}
+function refreshTraining(){
+ $('practiceCorrect').textContent=session.correct;$('practiceErrors').textContent=session.errors;
+ $('practiceAccuracy').textContent=accuracy()===null?'—':accuracy()+' %';$('practiceStreak').textContent=session.streak;
+ const prior=stats[trainingKey()];
+ $('practiceRecord').textContent=mode==='auto'?'Lecture automatique : pas de score.':prior?'Dernière progression : '+prior.last.steps+'/'+prior.last.total+' étapes · '+prior.last.accuracy+' % · '+prior.completed+' passage(s) terminé(s)'+(prior.completed?' · record : '+prior.best+' %':''):'Aucun résultat enregistré pour ce morceau et cette main.';
+}
+function restartPass(){
+ songTime=0;currentGroup=0;done=0;autoCursor=0;waiting=false;lastFrame=0;
+ for(const g of groups)g.remaining=new Set(g.practice.map(n=>n.m));
+ session={correct:0,errors:0,streak:0,bestStreak:0};updateUI();draw();
+}
+function refreshLoop(){
+ const max=Math.ceil(songDuration*10)/10;
+ $('loopFrom').max=String(Math.max(0,max-.1));$('loopTo').max=String(max);
+ $('loopFrom').value=loopRange?loopRange.from:0;$('loopTo').value=loopRange?loopRange.to:max;
+ $('loopOff').disabled=!loopRange;$('loopApply').disabled=!songDuration;
+ $('loopStatus').textContent=loopRange?'Boucle active : '+loopRange.from+' – '+loopRange.to+' s. Retour automatique au début du passage.':'Morceau entier · '+max+' s.';
+}
+$('loopApply').onclick=()=>{
+ const from=Number($('loopFrom').value),to=Number($('loopTo').value);
+ const playable=selectedSong.notes.filter(n=>canPlay(n.m)),offset=playable[0]?.t||0;
+ if(!Number.isFinite(from)||!Number.isFinite(to)||from<0||to<=from||to>Math.ceil(songDuration*10)/10||!playable.some(n=>n.t-offset>=from&&n.t-offset<to&&userPlays(n))){$('loopStatus').textContent='Choisis un passage valide contenant des notes à jouer (entre 0 et '+Math.ceil(songDuration*10)/10+' s).';return;}
+ loopRange={from,to};prepareSong(selectedSong);
+};
+$('loopOff').onclick=()=>{loopRange=null;prepareSong(selectedSong)};
+function applyLighting(){
+ document.documentElement.style.setProperty('--left-hand',lighting.left);document.documentElement.style.setProperty('--right-hand',lighting.right);
+ $('leftColor').value=lighting.left;$('rightColor').value=lighting.right;$('ledEffect').value=lighting.effect;
+ $('ledrail').classList.toggle('pulse',lighting.effect==='pulse');$('ledrail').classList.toggle('soft',lighting.effect==='soft');
+ $('ledBrightness').value=lighting.brightness;$('ledBrightnessValue').textContent=lighting.brightness+' %';
+ writeLocal(LIGHT_KEY,lighting);draw();syncLighting(true);
+}
+for(const [id,key] of [['leftColor','left'],['rightColor','right'],['ledEffect','effect'],['ledBrightness','brightness']]){
+ $(id).addEventListener('input',()=>{lighting[key]=key==='brightness'?Number($(id).value):$(id).value;applyLighting()});
+}
+$('ledDefaults').onclick=()=>{lighting={left:'#aa72ff',right:'#ff65a6',effect:'steady',brightness:15};applyLighting()};
+const BLE_SERVICE='6e400001-b5a3-f393-e0a9-e50e24dcca9e',BLE_RX='6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+let bleDevice=null,bleCharacteristic=null,bleBusy=false,bleConnecting=false,blePending=null,bleLast='',blePalette='',bleLastAt=0,bleHeartbeat=0;
+function lightNotes(){
+ if(!playing)return [];
+ if(mode==='learn'){const g=expectedGroup();return g?[...g.remaining]:[];}
+ return [...new Set(activeNotes.filter(n=>n.t<=songTime&&n.t+n.d>songTime).map(n=>n.m))];
+}
+// Paquet 20 octets : 1, première note MIDI, masques de 8 octets gauche/droite, luminosité et effet.
+function lightFrame(notes,first,settings){
+ const data=new Uint8Array(20);data[0]=1;data[1]=first;
+ for(const n of notes){const i=n-first;if(i<0||i>=61)continue;data[(n<MIDDLE_C?2:10)+(i>>3)]|=1<<(i%8)}
+ data[18]=settings.brightness;data[19]=['steady','pulse','soft'].indexOf(settings.effect);return data;
+}
+function paletteFrame(){const hex=c=>[1,3,5].map(i=>parseInt(c.slice(i,i+2),16));return Uint8Array.from([2,...hex(lighting.left),...hex(lighting.right)])}
+function syncLighting(force=false){
+ if(mode!=='auto'&&!bleCharacteristic)return;
+ const notes=lightNotes();
+ if(mode==='auto'){clearLeds();for(const n of notes)leds.get(n)?.classList.add('on')}
+ if(!bleCharacteristic)return;
+ const frame=lightFrame(notes,FIRST,lighting),key=Array.from(frame).join(','),palette=paletteFrame(),pk=Array.from(palette).join(',');
+ if(force||key!==bleLast||pk!==blePalette||Date.now()-bleLastAt>=1000){blePending={frame,key,palette,pk};void flushLighting();}
+}
+async function flushLighting(){
+ if(bleBusy||!bleCharacteristic||!blePending)return;bleBusy=true;
+ const ch=bleCharacteristic,p=blePending;blePending=null;
+ try{
+  if(p.key===bleLast&&p.pk===blePalette&&Date.now()-bleLastAt<1000)return;
+  const write=bytes=>ch.properties.write&&ch.writeValueWithResponse?ch.writeValueWithResponse(bytes):ch.writeValueWithoutResponse?ch.writeValueWithoutResponse(bytes):ch.writeValue(bytes);
+  if(p.pk!==blePalette){await write(p.palette);if(ch!==bleCharacteristic)return;blePalette=p.pk}
+  await write(p.frame);if(ch===bleCharacteristic){bleLast=p.key;bleLastAt=Date.now();}
+ }catch(e){if(ch===bleCharacteristic)$('bleStatus').textContent='Envoi interrompu : reconnecte l’ESP32.';blePending=null}
+ finally{bleBusy=false;if(blePending)void flushLighting()}
+}
+function bleDisconnected(){clearInterval(bleHeartbeat);bleHeartbeat=0;bleLastAt=0;bleDevice=null;bleCharacteristic=null;bleLast='';blePalette='';blePending=null;$('bleConnect').disabled=false;$('bleDisconnect').disabled=true;$('bleStatus').textContent='ESP32 déconnecté.'}
+$('bleConnect').onclick=async()=>{
+ if(bleConnecting||bleCharacteristic)return;
+ if(!navigator.bluetooth){$('bleStatus').textContent='Bluetooth Web indisponible. Essaie Chrome Android ou un navigateur compatible sur HTTPS.';return;}
+ bleConnecting=true;$('bleConnect').disabled=true;
+ try{
+  bleDevice=await navigator.bluetooth.requestDevice({filters:[{services:[BLE_SERVICE]}]});
+  bleDevice.addEventListener('gattserverdisconnected',bleDisconnected);
+  const server=await bleDevice.gatt.connect(),service=await server.getPrimaryService(BLE_SERVICE);
+  bleCharacteristic=await service.getCharacteristic(BLE_RX);$('bleDisconnect').disabled=false;
+  $('bleStatus').textContent='Connecté : '+(bleDevice.name||'ESP32')+' · envoi des notes activé.';syncLighting(true);bleHeartbeat=setInterval(()=>syncLighting(),1000);
+ }catch(e){if(bleDevice?.gatt.connected)bleDevice.gatt.disconnect();bleDisconnected();$('bleStatus').textContent='Connexion non établie : '+(e.message||e.name)}
+ finally{bleConnecting=false;$('bleConnect').disabled=!!bleCharacteristic}
+};
+$('bleDisconnect').onclick=()=>{if(bleDevice?.gatt.connected)bleDevice.gatt.disconnect();bleDisconnected()};
+window.addEventListener('pagehide',()=>{if(bleDevice?.gatt.connected)bleDevice.gatt.disconnect()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&bleDevice?.gatt.connected)bleDevice.gatt.disconnect()});
 let pendingSlot=null;
 $('songs').onchange=()=>{
  const song=songs.find(s=>s.id===$('songs').value);
@@ -785,6 +938,7 @@ void restore().then(()=>{
    $('songs').value=latest.id;prepareSong(latest);
   }
 });
+applyLighting();
 requestAnimationFrame(layoutKeyboard);
 </script>
 
@@ -793,7 +947,7 @@ requestAnimationFrame(layoutKeyboard);
 (function(){
  'use strict';
  // Numéro de build croissant : 27 → V1.27, 99 → V1.99, 100 → V2, 101 → V2.1.
- const APP_BUILD=27;
+ const APP_BUILD=28;
  function formatAppVersion(build){
   const major=1+Math.floor(build/100), minor=build%100;
   return 'V'+major+(minor?'.'+minor:'');
