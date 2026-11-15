@@ -521,6 +521,10 @@ const mic={
   for(let i=0;i<count;i++){
    if(coeff[i]<threshold)continue;
    const n=i+FIRST;if(!canPlay(n))continue;
+    if(window.pianoEtoileMeasuredNote?.(n)){
+     if(this.notePeak(this.spectrum,n))possible.push({n,strength:coeff[i]/biggest});
+     continue;
+    }
    const freq=440*Math.pow(2,(n-69)/12),bin=freq/binHz;
    let fundamental=0;
    for(let k=Math.max(1,Math.floor(bin)-2);k<=Math.min(y.length-1,Math.ceil(bin)+2);k++)
@@ -981,7 +985,7 @@ requestAnimationFrame(layoutKeyboard);
 (function(){
  'use strict';
  // Numéro de build croissant : 27 → V1.27, 99 → V1.99, 100 → V2, 101 → V2.1.
- const APP_BUILD=30;
+ const APP_BUILD=31;
  function formatAppVersion(build){
   const major=1+Math.floor(build/100), minor=build%100;
   return 'V'+major+(minor?'.'+minor:'');

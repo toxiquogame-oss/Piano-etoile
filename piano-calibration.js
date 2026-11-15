@@ -7,6 +7,111 @@ const key='piano-etoile-profiles-v29-verified';
 let trained={};try{trained=JSON.parse(localStorage.getItem(key)||'{}')||{}}catch(e){}
 const $=id=>document.getElementById(id), hz=n=>440*Math.pow(2,(n-69)/12);
 const get=()=>trained[pianoProfile]||(trained[pianoProfile]={});
+
+// Apprentissage empirique : ignore les infrasons et compare les pics mesurés,
+// sans utiliser la fréquence théorique de la touche sélectionnée.
+const MIN_CAPTURE_HZ=25,MAX_CAPTURE_HZ=5200;
+const amplitude=db=>Number.isFinite(db)?Math.pow(10,Math.max(-130,db)/20):0;
+const isMeasured=x=>x?.method==='three-strikes'&&Array.isArray(x.peaks)&&x.peaks.length>0;
+function localPeak(spec,k,step){
+ const a=spec[k-1],b=spec[k],c=spec[k+1],den=a-2*b+c;
+ const offset=Number.isFinite(den)&&den<0?Math.max(-.5,Math.min(.5,.5*(a-c)/den)):0;
+ return {f:(k+offset)*step,a:amplitude(b)};
+}
+function extractSignature(spec,step,noise,cfg){
+ const peaks=[],limit=Math.min(spec.length-2,Math.floor(MAX_CAPTURE_HZ/step)+1);
+ for(let k=Math.max(2,Math.floor(MIN_CAPTURE_HZ/step));k<=limit;k++){
+  if(!(spec[k]>spec[k-1]&&spec[k]>=spec[k+1]))continue;
+  const {f,a}=localPeak(spec,k,step);
+  if(f<MIN_CAPTURE_HZ||f>MAX_CAPTURE_HZ)continue;
+  let bg=0,count=0;
+  for(let j=Math.max(1,k-9);j<=Math.min(spec.length-1,k+9);j++){
+   if(Math.abs(j-k)<=2)continue;bg+=amplitude(spec[j]);count++;
+  }
+  const floor=Math.max(cfg.peakFloor, (noise?.[k]||0)*cfg.peakRatio, (bg/Math.max(1,count))*2.2);
+  if(a<floor)continue;
+  peaks.push([f,a]);
+ }
+ peaks.sort((a,b)=>b[1]-a[1]);
+ const level=peaks[0]?.[1]||0;
+ return {level,peaks:peaks.filter(p=>p[1]>=level*.065).slice(0,14).map(([f,a])=>[f,a/level])};
+}
+const tolerance=(f,step)=>Math.max(step*.55,f*.004);
+function similarity(a,b,step){
+ if(!a.length||!b.length)return 0;
+ let dot=0;const used=new Set();
+ for(const [f,w] of a){
+  let best=-1,distance=Infinity;
+  for(let j=0;j<b.length;j++){
+   const d=Math.abs(f-b[j][0]);
+   if(!used.has(j)&&d<=tolerance(f,step)&&d<distance){best=j;distance=d;}
+  }
+  if(best>=0){used.add(best);dot+=w*b[best][1];}
+ }
+ const norm=x=>Math.sqrt(x.reduce((s,p)=>s+p[1]*p[1],0));
+ return dot/(norm(a)*norm(b)||1);
+}
+function combineSignatures(samples,step){
+ const consensus=samples[0].filter(([f])=>samples.slice(1).every(s=>s.some(p=>Math.abs(f-p[0])<=tolerance(f,step))));
+ const out=consensus.map(([f])=>{
+  const matches=samples.map(s=>s.filter(p=>Math.abs(f-p[0])<=tolerance(f,step)).sort((a,b)=>Math.abs(a[0]-f)-Math.abs(b[0]-f))[0]);
+  return [matches.reduce((s,p)=>s+p[0],0)/matches.length,matches.reduce((s,p)=>s+p[1],0)/matches.length];
+ });
+ const max=Math.max(0,...out.map(p=>p[1]));
+ return out.filter(p=>p[1]>=max*.065).sort((a,b)=>b[1]-a[1]).map(([f,a])=>[Number(f.toFixed(2)),Number((a/max).toFixed(4))]);
+}
+function validateStrikes(strikes,step){
+ if(strikes.length!==3||strikes.some(s=>!s.length))return null;
+ if(similarity(strikes[0],strikes[1],step)<.76||similarity(strikes[0],strikes[2],step)<.76||similarity(strikes[1],strikes[2],step)<.76)return null;
+ const peaks=combineSignatures(strikes,step);
+ return peaks.length?peaks:null;
+}
+// Une frappe doit être stable, suivie d'un vrai retour à un niveau faible,
+// puis d'une nouvelle attaque. La même note tenue ne compte qu'une fois.
+function newStrikeCollector(step,peakFloor){
+ let stable=[],strikes=[],waitingRelease=false,quiet=0,peak=0,release=0,minAttack=peakFloor;
+ return { push(frame){
+  if(waitingRelease){
+   if(frame.level<=Math.max(peakFloor,peak*.13)){
+    quiet++;release=Math.max(release,frame.level);
+    if(quiet>=4){waitingRelease=false;minAttack=Math.max(peakFloor,release*2.6,peak*.14);stable=[];peak=0;return {type:'ready',count:strikes.length};}
+   }else{quiet=0;release=0;}
+   return null;
+  }
+  if(frame.level<minAttack||!frame.peaks.length){stable=[];return null;}
+  if(stable.length&&similarity(stable[stable.length-1],frame.peaks,step)<.7)stable=[];
+  stable.push(frame.peaks);peak=Math.max(peak,frame.level);
+  if(stable.length<3)return null;
+  const sig=combineSignatures(stable,step);
+  if(!sig.length){stable=[];peak=0;return null;}
+  strikes.push(sig);waitingRelease=true;quiet=0;release=0;
+  return {type:strikes.length===3?'done':'strike',count:strikes.length,strikes:strikes.slice()};
+ }};
+}
+function measuredMatch(spec,step,entry,cfg){
+ if(!isMeasured(entry))return null;
+ const peaks=entry.peaks;
+ let observed=[],matched=0,total=0;
+ for(const [f,w] of peaks){
+  if(f<MIN_CAPTURE_HZ||f>MAX_CAPTURE_HZ)continue;
+  total+=w*w;const at=f/step;
+  let best=0;
+  for(let k=Math.max(2,Math.floor(at)-2);k<=Math.min(spec.length-2,Math.ceil(at)+2);k++){
+   if(!(spec[k]>spec[k-1]&&spec[k]>=spec[k+1]))continue;
+   const p=localPeak(spec,k,step);
+   if(Math.abs(p.f-f)<=tolerance(f,step)&&p.a>best){
+    let b=0,count=0;for(let j=Math.max(1,k-9);j<=Math.min(spec.length-1,k+9);j++){if(Math.abs(j-k)<=2)continue;b+=amplitude(spec[j]);count++;}
+    if(p.a>=Math.max(cfg.peakFloor,2.2*b/Math.max(1,count)))best=p.a;
+   }
+  }
+  observed.push([w,best]);if(best>0)matched+=w*w;
+ }
+ if(!total||matched/total<.72)return null;
+ const dot=observed.reduce((s,[w,a])=>s+w*a,0),power=observed.reduce((s,[,a])=>s+a*a,0);
+ if(!power||dot/Math.sqrt(total*power)<.72)return null;
+ return {amp:Math.max(...observed.map(x=>x[1])),cents:0};
+}
+
 // Les gabarits appris séparément aident à distinguer des octaves réellement jouées
 // des harmoniques d'une seule touche. Jamais besoin d'enregistrer les combinaisons.
 window.pianoEtoileIsPairTrained=(a,b)=>Boolean(trained[pianoProfile]?.[a]&&trained[pianoProfile]?.[b]);
@@ -15,13 +120,13 @@ const persist=()=>{try{localStorage.setItem(key,JSON.stringify(trained))}catch(e
 const wrap=document.createElement('section');wrap.className='calibration-panel';
 wrap.innerHTML='<style>.calibration-panel{border:1px solid #52516b;background:#1b1927;border-radius:14px;padding:13px;margin:0 0 12px;font-size:12px;color:#dcd4e6}.calibration-panel h2{font-size:15px;margin:0 0 6px}.calibration-panel p{line-height:1.5;margin:7px 0}.calrow[hidden]{display:none!important}.calrow{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:9px 0}.calibration-panel button,.calibration-panel select{padding:7px;min-height:36px;font-size:12px;max-width:100%}#calStatus{color:#d8c4ff}#calCount{color:#94e7e1;font-weight:bold}</style>'+
 '<h2>Apprendre les sons de ton piano · Notes et accords</h2>'+
-'<p>Enregistre uniquement les <b>notes jouables séparément</b> en son <b>piano classique</b> : 61 pour le Schubert et 61 pour le RockJam. Ensuite, le programme tentera de reconnaître les accords sans enregistrer toutes les combinaisons.</p>'+
+'<p>Enregistre trois frappes séparées pour chacune des <b>notes jouables</b> en son <b>piano classique</b> : 61 pour le Schubert et 61 pour le RockJam. Ensuite, le programme tentera de reconnaître les accords sans enregistrer toutes les combinaisons.</p>'+
 '<div class="calrow"><label for="calInput">Source audio :</label><select id="calInput"><option value="">Entrée automatique Android</option></select><button id="calFind" type="button">Actualiser les entrées</button></div>'+
 '<p><b>Casque branché au piano :</b> sélectionne « Casque · sons faibles » dans Type d’écoute au-dessus, puis approche une oreillette du microphone du téléphone, à condition qu’un peu de son s’en échappe. Le micro ne peut pas entendre un casque complètement silencieux à l’extérieur. Pour une écoute plus précise, une interface avec entrée ligne USB-C compatible Android reste une autre possibilité.</p>'+
 '<div class="calrow" id="calStartRow" hidden><label for="calFirst">Première note du Schubert 61 touches :</label><select id="calFirst"></select></div>'+
-'<div class="calrow"><label for="calNote">Note à apprendre :</label><select id="calNote"></select><button id="calRecord" type="button" class="primary">Enregistrer cette note</button><button id="calNext" type="button">Suivante</button><button id="calErase" type="button">Effacer ce profil</button></div>'+
+'<div class="calrow"><label for="calNote">Note à apprendre :</label><select id="calNote"></select><button id="calRecord" type="button" class="primary">Apprendre cette note (3 frappes)</button><button id="calNext" type="button">Suivante</button><button id="calErase" type="button">Effacer ce profil</button></div>'+
 '<div class="calrow"><span id="calCount">0 note enregistrée</span><span id="calStatus" role="status"></span></div>'+
-'<p>Nouvelle calibration : laisse le piano silencieux pendant la mesure du bruit, puis joue uniquement la note demandée après le signal. En l’absence de note valide, la sélection ne change pas.</p><p>Les notes sont identifiées par leur fréquence et leurs harmoniques ; les combinaisons de notes sont analysées ensemble. Les accords denses, les octaves superposées et les basses peuvent encore être confondus.</p>';
+'<p>Nouvelle calibration : reste silencieux au début, puis joue trois fois la touche choisie. Relâche-la et attends le signal entre chaque frappe. L’application compare les sons réellement captés (25 Hz et plus), sans imposer une fréquence théorique. Aucun passage automatique si les trois frappes ne concordent pas.</p><p>Les signatures apprises sont utilisées pour reconnaître les notes et les accords. Choisis bien la touche physique correspondant à la note sélectionnée. Les accords denses, les octaves superposées et les basses peuvent encore être confondus.</p>';
 document.querySelector('.mic-panel').insertAdjacentElement('afterend',wrap);
 const message=s=>{$('calStatus').textContent=s};
 const can=n=>n>=FIRST&&n<=PIANO_PROFILES[pianoProfile].workingLast;
@@ -48,13 +153,13 @@ function setStart(n){
 setStart(startNote);
 function refreshNotes(){
  const el=$('calNote'),prev=Number(el.value),map=get();el.replaceChildren();
- let total=0,count=0;
+ let total=0,count=0,measured=0;
  for(let n=FIRST;n<=LAST;n++){
-  if(!can(n))continue;total++;if(map[n])count++;
-  const opt=document.createElement('option');opt.value=n;opt.textContent=(map[n]?'✓ ':'')+noteName(n)+' ('+hz(n).toFixed(1)+' Hz)';el.appendChild(opt);
+  if(!can(n))continue;total++;if(map[n])count++;if(isMeasured(map[n]))measured++;
+  const opt=document.createElement('option');opt.value=n;opt.textContent=(isMeasured(map[n])?'✓ ':map[n]?'Ancien · ':'')+noteName(n);el.appendChild(opt);
  }
  if(can(prev))el.value=prev;
- $('calCount').textContent=count+' / '+total+' touches apprises · enregistrées localement';
+ $('calCount').textContent=measured+' / '+total+' touches apprises par 3 frappes'+(count>measured?' · '+(count-measured)+' anciennes signatures conservées':'');
  $('calStartRow').hidden=pianoProfile!=='schubert';
 }
 choosePianoProfile=function(id){
@@ -68,7 +173,7 @@ $('calFirst').onchange=()=>{
  if(pianoProfile==='schubert')choosePianoProfile('schubert');
 };
 function next(){const list=[...$('calNote').options].map(o=>Number(o.value)),current=Number($('calNote').value),map=get();
- const n=list.filter(x=>x>current).concat(list.filter(x=>x<=current)).find(x=>!map[x]);
+ const n=list.filter(x=>x>current).concat(list.filter(x=>x<=current)).find(x=>!isMeasured(map[x]));
  if(n===undefined)message('Toutes les touches jouables de ce piano sont enregistrées.');
  else $('calNote').value=n;
 }
@@ -82,7 +187,12 @@ $('calErase').onclick=()=>{
 function learnedPrepare(){
  oldPrepare();const learned=get(),df=mic.ctx.sampleRate/mic.fftSize;
  for(const t of mic.templates){
-  const hs=learned[t.note];if(!Array.isArray(hs)||hs.length<7)continue;
+  const hs=learned[t.note];
+  if(isMeasured(hs)){
+   const bins=new Map();for(const [f,a] of hs.peaks){const at=f/df,width=Math.max(1,at*.003);for(let b=Math.max(1,Math.floor(at-2.5*width));b<=Math.min(mic.fftSize/2-2,Math.ceil(at+2.5*width));b++){const d=(b-at)/width;bins.set(b,(bins.get(b)||0)+a*Math.exp(-.5*d*d));}}
+   const norm=Math.sqrt([...bins.values()].reduce((s,w)=>s+w*w,0))||1;t.list=[...bins].map(([b,w])=>[b,w/norm]);continue;
+  }
+  if(!Array.isArray(hs)||hs.length<7)continue;
   const bins=new Map(),f0=hz(t.note);
   for(let h=1;h<=7;h++){
    const f=f0*h;if(f>Math.min(5200,mic.ctx.sampleRate*.45))break;
@@ -100,6 +210,9 @@ function learnedPrepare(){
  }));
 }
 mic.prepareTemplates=learnedPrepare;
+const theoreticalPeak=mic.notePeak.bind(mic);
+window.pianoEtoileMeasuredNote=n=>isMeasured(get()[n]);
+mic.notePeak=function(spec,n){const entry=get()[n];return isMeasured(entry)?measuredMatch(spec,this.ctx.sampleRate/this.fftSize,entry,this.captureSettings()):theoreticalPeak(spec,n);};
 async function refreshInputs(){
  if(!navigator.mediaDevices?.enumerateDevices)return message('Sélection audio non prise en charge sur ce navigateur.');
  try{
@@ -134,42 +247,34 @@ async function record(){
   const n=Number($('calNote').value),prof=pianoProfile,generation=mic.generation;
   if(!can(n))throw Error('Cette touche est hors service ou hors du clavier.');
   const spec=new Float32Array(mic.analyser.frequencyBinCount),step=mic.ctx.sampleRate/mic.fftSize;
-  const sums=new Float64Array(7);
+  const noise=new Float32Array(spec.length);
   function sample(){
    if(!mic.enabled||mic.generation!==generation||pianoProfile!==prof||mic.ctx.state!=='running')throw Error('Capture interrompue. Réactive le micro et réessaie.');
-   mic.analyser.getFloatTimeDomainData(mic.samples);mic.analyser.getFloatFrequencyData(spec);return mic.sampleRms();
+   mic.analyser.getFloatFrequencyData(spec);
   }
   message('Ne joue rien : mesure du bruit de fond…');
   await pause(450);
-  let noise=0,noisePeak=0;
-  for(let j=0;j<7;j++){noise=Math.max(noise,sample());noisePeak=Math.max(noisePeak,mic.notePeak(spec,n)?.amp||0);await pause(85);}
-  const cfg=mic.captureSettings();
-  const gate=Math.max(cfg.baseGate,noise*cfg.noiseRatio),signalPeak=Math.max(cfg.peakFloor,noisePeak*cfg.peakRatio);
-  message('Joue '+noteName(n)+' maintenant et garde la touche appuyée environ 2 secondes.');
-  let count=0,consecutive=0;
-  const deadline=performance.now()+30000;
+  for(let j=0;j<7;j++){sample();for(let k=0;k<spec.length;k++)noise[k]=Math.max(noise[k],amplitude(spec[k]));await pause(85);}
+  const cfg=mic.captureSettings(),collector=newStrikeCollector(step,cfg.peakFloor);
+  message(noteName(n)+' · frappe 1/3 : joue une fois.');
+  const deadline=performance.now()+45000;
   while(performance.now()<deadline){
-   const rms=sample(),peak=mic.notePeak(spec,n);
-   if(rms>gate&&peak&&peak.amp>=signalPeak){
-    consecutive++;count++;
-    for(let h=1;h<=7;h++){
-     const at=hz(n)*h/step;let amp=0;
-     for(let b=Math.max(2,Math.round(at)-2);b<=Math.min(spec.length-2,Math.round(at)+2);b++)amp=Math.max(amp,Math.pow(10,Math.max(-110,spec[b])/20));
-     sums[h-1]+=amp;
-    }
-    if(consecutive>=cfg.frames&&count>=cfg.frames){
-     const ratios=Array.from(sums,x=>x/count),max=Math.max(...ratios);
-     if(max<cfg.peakFloor)throw Error('Son trop faible : rapproche le micro et réessaie.');
-     get()[n]=ratios.map(x=>Math.max(.025,Math.min(1,Number((x/max).toFixed(3)))));
-     persist();mic.prepareTemplates();refreshNotes();next();
-     message(noteName(n)+' vérifié et mémorisé. Relâche la touche avant la prochaine capture.');return;
-    }
-   }else{
-    consecutive=0;count=0;sums.fill(0);
+   sample();const frame=extractSignature(spec,step,noise,cfg);
+   const event=collector.push(frame);
+   if(event?.type==='strike')message(noteName(n)+' · '+event.count+'/3 captées. Relâche et attends le signal.');
+   if(event?.type==='ready')message(noteName(n)+' · frappe '+(event.count+1)+'/3 : joue maintenant.');
+   if(event?.type==='done'){
+    const peaks=validateStrikes(event.strikes,step);
+    if(!peaks)throw Error('Les 3 sons ne correspondent pas assez. Rien enregistré : rejoue la même touche trois fois.');
+    const duplicate=Object.entries(get()).find(([k,v])=>Number(k)!==n&&isMeasured(v)&&similarity(v.peaks,peaks,step)>.96);
+    if(duplicate)throw Error('Ce son ressemble trop à '+noteName(Number(duplicate[0]))+' déjà apprise. Vérifie la touche ou la transposition du piano.');
+    get()[n]={method:'three-strikes',peaks};
+    persist();mic.prepareTemplates();refreshNotes();next();
+    message(noteName(n)+' · 3/3 frappes concordantes : son mémorisé. Relâche la touche.');return;
    }
    await pause(85);
   }
-  message('Aucune note '+noteName(n)+' valide détectée. La touche reste sélectionnée. Réessaie en rapprochant le micro ou en augmentant le volume.');
+  message('Temps écoulé : les 3 frappes séparées n’ont pas été validées. La touche reste sélectionnée.');
  }catch(e){message(e.message||String(e))}
  finally{recording=false;window.pianoEtoileCalibrating=false;for(const id of ids)$(id).disabled=false}
 }
