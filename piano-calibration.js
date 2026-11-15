@@ -2,7 +2,8 @@
 'use strict';
 // Piano étoilé V19 : calibration spectrale locale, Schubert Etude 61 touches, sélection de la source audio.
 // La reconnaissance polyphonique existante reste en place. Aucune donnée sonore n'est envoyée à un serveur.
-const key='piano-etoile-profiles-v18';
+// Anciens profils conservés dans le stockage, mais captures non vérifiées écartées.
+const key='piano-etoile-profiles-v29-verified';
 let trained={};try{trained=JSON.parse(localStorage.getItem(key)||'{}')||{}}catch(e){}
 const $=id=>document.getElementById(id), hz=n=>440*Math.pow(2,(n-69)/12);
 const get=()=>trained[pianoProfile]||(trained[pianoProfile]={});
@@ -20,7 +21,7 @@ wrap.innerHTML='<style>.calibration-panel{border:1px solid #52516b;background:#1
 '<div class="calrow" id="calStartRow" hidden><label for="calFirst">Première note du Schubert 61 touches :</label><select id="calFirst"></select></div>'+
 '<div class="calrow"><label for="calNote">Note à apprendre :</label><select id="calNote"></select><button id="calRecord" type="button" class="primary">Enregistrer cette note</button><button id="calNext" type="button">Suivante</button><button id="calErase" type="button">Effacer ce profil</button></div>'+
 '<div class="calrow"><span id="calCount">0 note enregistrée</span><span id="calStatus" role="status"></span></div>'+
-'<p>Les notes sont identifiées par leur fréquence et leurs harmoniques ; les combinaisons de notes sont analysées ensemble. Les accords denses, les octaves superposées et les basses peuvent encore être confondus.</p>';
+'<p>Nouvelle calibration : laisse le piano silencieux pendant la mesure du bruit, puis joue uniquement la note demandée après le signal. En l’absence de note valide, la sélection ne change pas.</p><p>Les notes sont identifiées par leur fréquence et leurs harmoniques ; les combinaisons de notes sont analysées ensemble. Les accords denses, les octaves superposées et les basses peuvent encore être confondus.</p>';
 document.querySelector('.mic-panel').insertAdjacentElement('afterend',wrap);
 const message=s=>{$('calStatus').textContent=s};
 const can=n=>n>=FIRST&&n<=PIANO_PROFILES[pianoProfile].workingLast;
@@ -124,42 +125,52 @@ refreshNotes();void refreshInputs();
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function record(){
  if(recording)return;
- if(!mic.enabled)await mic.start();
- if(!mic.enabled||!mic.ctx){message('Autorise le microphone ou branche une entrée audio reconnue.');return;}
- const n=Number($('calNote').value),prof=pianoProfile;
- if(!can(n))return message('Cette touche est hors service ou hors du clavier.');
- recording=true;$('calRecord').disabled=true;$('calErase').disabled=true;
- const sums=new Float64Array(7),spec=new Float32Array(mic.analyser.frequencyBinCount),step=mic.ctx.sampleRate/mic.fftSize;
- let count=0;
+ recording=true;window.pianoEtoileCalibrating=true;
+ const ids=['calRecord','calErase','calNext','calNote','calInput','calFirst','calFind'];
+ for(const id of ids)$(id).disabled=true;
  try{
-  message('Joue '+noteName(n)+' maintenant, seul, et garde la touche appuyée 2 secondes.');
-  await pause(250);
-  for(let i=0;i<24;i++){
-   if(!mic.enabled||pianoProfile!==prof)throw Error('Capture interrompue.');
-   mic.analyser.getFloatTimeDomainData(mic.samples);
-   let e=0;for(let k=0;k<mic.samples.length;k+=32)e+=mic.samples[k]*mic.samples[k];
-   const rms=Math.sqrt(e/(mic.samples.length/32));
-   if(rms>.0022){
-    mic.analyser.getFloatFrequencyData(spec);let sum=0;
+  if(!mic.enabled)await mic.start();
+  if(!mic.enabled||!mic.ctx)throw Error('Autorise le microphone ou branche une entrée audio reconnue.');
+  const n=Number($('calNote').value),prof=pianoProfile,generation=mic.generation;
+  if(!can(n))throw Error('Cette touche est hors service ou hors du clavier.');
+  const spec=new Float32Array(mic.analyser.frequencyBinCount),step=mic.ctx.sampleRate/mic.fftSize;
+  const sums=new Float64Array(7);
+  function sample(){
+   if(!mic.enabled||mic.generation!==generation||pianoProfile!==prof||mic.ctx.state!=='running')throw Error('Capture interrompue. Réactive le micro et réessaie.');
+   mic.analyser.getFloatTimeDomainData(mic.samples);mic.analyser.getFloatFrequencyData(spec);return mic.sampleRms();
+  }
+  message('Ne joue rien : mesure du bruit de fond…');
+  await pause(450);
+  let noise=0,noisePeak=0;
+  for(let j=0;j<7;j++){noise=Math.max(noise,sample());noisePeak=Math.max(noisePeak,mic.notePeak(spec,n)?.amp||0);await pause(85);}
+  const gate=Math.max(.00030,noise*2.2),signalPeak=Math.max(.000075,noisePeak*3);
+  message('Joue '+noteName(n)+' maintenant et garde la touche appuyée environ 2 secondes.');
+  let count=0,consecutive=0;
+  const deadline=performance.now()+30000;
+  while(performance.now()<deadline){
+   const rms=sample(),peak=mic.notePeak(spec,n);
+   if(rms>gate&&peak&&peak.amp>=signalPeak){
+    consecutive++;count++;
     for(let h=1;h<=7;h++){
-     const at=hz(n)*h/step;let peak=0;
-     for(let b=Math.max(2,Math.round(at)-3);b<=Math.min(spec.length-2,Math.round(at)+3);b++){
-      peak=Math.max(peak,Math.pow(10,Math.max(-110,spec[b])/20));
-     }
-     sums[h-1]+=peak;sum+=peak;
+     const at=hz(n)*h/step;let amp=0;
+     for(let b=Math.max(2,Math.round(at)-2);b<=Math.min(spec.length-2,Math.round(at)+2);b++)amp=Math.max(amp,Math.pow(10,Math.max(-110,spec[b])/20));
+     sums[h-1]+=amp;
     }
-    if(sum>.00005)count++;
+    if(consecutive>=8&&count>=8){
+     const ratios=Array.from(sums,x=>x/count),max=Math.max(...ratios);
+     if(max<.000075)throw Error('Son trop faible : rapproche le micro et réessaie.');
+     get()[n]=ratios.map(x=>Math.max(.025,Math.min(1,Number((x/max).toFixed(3)))));
+     persist();mic.prepareTemplates();refreshNotes();next();
+     message(noteName(n)+' vérifié et mémorisé. Relâche la touche avant la prochaine capture.');return;
+    }
+   }else{
+    consecutive=0;count=0;sums.fill(0);
    }
    await pause(85);
   }
-  if(count<5)throw Error('Son trop faible ou absent. Vérifie le micro/câble et réessaie.');
-  const ratios=Array.from(sums,x=>x/count),max=Math.max(...ratios);
-  if(max<.00001)throw Error('Aucun son exploitable capturé.');
-  get()[n]=ratios.map(x=>Math.max(.025,Math.min(1,Number((x/max).toFixed(3)))));
-  persist();if(mic.enabled&&mic.ctx)mic.prepareTemplates();
-  refreshNotes();next();message(noteName(n)+' mémorisé : '+count+' mesures. Passe à la touche suivante.');
+  message('Aucune note '+noteName(n)+' valide détectée. La touche reste sélectionnée. Réessaie en rapprochant le micro ou en augmentant le volume.');
  }catch(e){message(e.message||String(e))}
- finally{recording=false;$('calRecord').disabled=false;$('calErase').disabled=false}
+ finally{recording=false;window.pianoEtoileCalibrating=false;for(const id of ids)$(id).disabled=false}
 }
 $('calRecord').onclick=()=>void record();
 })();

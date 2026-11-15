@@ -427,7 +427,24 @@ const mic={
  enabled:false,starting:false,stream:null,ctx:null,source:null,analyser:null,
  spectrum:null,samples:null,linear:null,frameId:0,lastScan:0,tracks:new Map(),
  detected:new Set(),lastSeen:new Map(),fired:new Map(),generation:0,templates:[],gram:[],
- framePeriod:85,fftSize:16384,confidence:[],lastInfoAt:0,
+ framePeriod:85,fftSize:16384,confidence:[],lastInfoAt:0,noiseRms:0,noiseFrames:0,
+ sampleRms(){
+  let s=0,q=0,count=0;for(let j=0;j<this.samples.length;j+=4){const x=this.samples[j];s+=x;q+=x*x;count++;}
+  return Math.sqrt(Math.max(0,q/count-(s/count)**2));
+ },
+ notePeak(spec,n){
+  const step=this.ctx.sampleRate/this.fftSize,f=440*Math.pow(2,(n-69)/12),at=f/step;
+  let k=Math.round(at),best=-Infinity;
+  for(let j=Math.max(2,Math.floor(at)-2);j<=Math.min(spec.length-3,Math.ceil(at)+2);j++)if(spec[j]>=spec[j-1]&&spec[j]>=spec[j+1]&&spec[j]>best){k=j;best=spec[j];}
+  if(!Number.isFinite(best)||best< -85)return null;
+  const a=spec[k-1],b=spec[k],c=spec[k+1],den=a-2*b+c;
+  const offset=Number.isFinite(den)&&den<0?Math.max(-.5,Math.min(.5,.5*(a-c)/den)):0;
+  const cents=1200*Math.log2((k+offset)*step/f);
+  let bg=0,count=0;for(let j=Math.max(1,k-16);j<=Math.min(spec.length-1,k+16);j++){if(Math.abs(j-k)<=3)continue;bg+=Math.pow(10,Math.max(-110,spec[j])/20);count++;}
+  const amp=Math.pow(10,best/20);
+  if(Math.abs(cents)>65||amp<Math.max(0.000056,4*bg/Math.max(1,count)))return null;
+  return {amp,cents};
+ },
  setMessage(msg){$('micStatus').textContent=msg},
  updateButtons(){
   $('micToggle').setAttribute('aria-pressed',String(this.enabled));
@@ -537,7 +554,7 @@ const mic={
    this.spectrum=new Float32Array(this.analyser.frequencyBinCount);
    this.samples=new Float32Array(this.analyser.fftSize);
    this.linear=new Float32Array(this.analyser.frequencyBinCount);
-   this.prepareTemplates();this.enabled=true;this.tracks.clear();this.fired.clear();
+   this.prepareTemplates();this.enabled=true;this.tracks.clear();this.fired.clear();this.noiseRms=0;this.noiseFrames=0;
    const track=stream.getAudioTracks()[0];if(track)track.onended=()=>this.stop('Micro déconnecté.');
    this.setMessage('Micro actif · écoute du piano');$('micPermissionHelp').textContent='Autorisation reçue. Le micro reste optionnel et peut être coupé avec « Détection sonore : OFF ». '; 
    this.frameId=requestAnimationFrame(t=>this.listen(t));
@@ -570,20 +587,23 @@ const mic={
   if(t-this.lastScan<this.framePeriod)return;
   this.lastScan=t;
   this.analyser.getFloatTimeDomainData(this.samples);
-  let sum=0;for(let i=0;i<this.samples.length;i+=4){const x=this.samples[i];sum+=x*x;}
-  const rms=Math.sqrt(sum/(this.samples.length/4));
+  const rms=this.sampleRms();
   const sensitivity=Number($('micSensitivity').value);
   // Une oreillette de casque près du téléphone produit souvent un signal faible.
   // Le seuil ancien (~0.006 en réglage standard) empêchait alors toute analyse.
-  const gate=.0026*Math.pow(0.43,(sensitivity-10)/80);
+  const baseGate=.00065*Math.pow(.45,(sensitivity-10)/80);
+   if(this.noiseFrames<5){this.noiseRms=Math.max(this.noiseRms,rms);this.noiseFrames++;}
+   const gate=Math.max(baseGate,this.noiseRms*2.6);
   $('micLevel').style.width=(Math.min(100,rms*750))+'%';
   let candidates=[];
-  if(rms>gate){
-   this.analyser.getFloatFrequencyData(this.spectrum);
+  if(rms>gate&&this.noiseFrames>=5&&!window.pianoEtoileCalibrating){
+    this.analyser.getFloatFrequencyData(this.spectrum);
    for(let i=0;i<this.spectrum.length;i++)this.linear[i]=Math.pow(10,Math.max(-110,this.spectrum[i])/20);
-   candidates=this.estimate();
-  }
-  const raw=new Map(candidates.map(c=>[c.n,c.strength]));
+   candidates=this.estimate().filter(c=>this.notePeak(this.spectrum,c.n));
+   }
+   if(!candidates.length&&rms<Math.max(baseGate,this.noiseRms*1.4))this.noiseRms=.96*this.noiseRms+.04*rms;
+   if(rms<=gate||window.pianoEtoileCalibrating)this.tracks.clear();
+   const raw=new Map(candidates.map(c=>[c.n,c.strength]));
   const now=performance.now(),newly=new Set();
   // Trois analyses positives avant d'accepter une note ; les accords sont traités ensemble.
   for(let n=FIRST;n<=LAST;n++){
@@ -947,7 +967,7 @@ requestAnimationFrame(layoutKeyboard);
 (function(){
  'use strict';
  // Numéro de build croissant : 27 → V1.27, 99 → V1.99, 100 → V2, 101 → V2.1.
- const APP_BUILD=28;
+ const APP_BUILD=29;
  function formatAppVersion(build){
   const major=1+Math.floor(build/100), minor=build%100;
   return 'V'+major+(minor?'.'+minor:'');
